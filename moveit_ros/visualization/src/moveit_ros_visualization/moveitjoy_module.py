@@ -354,14 +354,19 @@ class MoveitJoy:
             self.planning_groups_tips[g] = ri.get_group_joint_tips(g)
             planning_groups[g] = ["/rviz/moveit/move_marker/goal_" + l
                                   for l in self.planning_groups_tips[g]]
+            rospy.loginfo("planing group names = " + str(ri.get_group_link_names(g)))
+
         for name in planning_groups.keys():
             if len(planning_groups[name]) == 0:
+                print name, planning_groups[name]
                 del planning_groups[name]
             else:
                 print name, planning_groups[name]
         self.planning_groups = planning_groups
+
         self.planning_groups_keys = planning_groups.keys()   #we'd like to store the 'order'
         self.frame_id = ri.get_planning_frame()
+
     def __init__(self):
         self.initial_poses = {}
         self.planning_groups_tips = {}
@@ -378,18 +383,21 @@ class MoveitJoy:
         self.initialized = False
         self.parseSRDF()
         self.plan_group_pub = rospy.Publisher('/rviz/moveit/select_planning_group', String, queue_size=5)
-        self.updatePlanningGroup(0)
-        self.updatePoseTopic(0, False)
-        self.joy_pose_pub = rospy.Publisher("/joy_pose", PoseStamped, queue_size=1)
-        self.plan_pub = rospy.Publisher("/rviz/moveit/plan", Empty, queue_size=5)
-        self.execute_pub = rospy.Publisher("/rviz/moveit/execute", Empty, queue_size=5)
-        self.update_start_state_pub = rospy.Publisher("/rviz/moveit/update_start_state", Empty, queue_size=5)
-        self.update_goal_state_pub = rospy.Publisher("/rviz/moveit/update_goal_state", Empty, queue_size=5)
-        self.interactive_marker_sub = rospy.Subscriber("/rviz_moveit_motion_planning_display/robot_interaction_interactive_marker_topic/update_full",
-                                                       InteractiveMarkerInit,
-                                                       self.markerCB, queue_size=1)
-        self.sub = rospy.Subscriber("/joy", Joy, self.joyCB, queue_size=1)
+        #self.updatePlanningGroup(0)
+        #self.updatePoseTopic(0, False)
+        #self.joy_pose_pub = rospy.Publisher("/joy_pose", PoseStamped, queue_size=1)
+        #self.plan_pub = rospy.Publisher("/rviz/moveit/plan", Empty, queue_size=5)
+        #self.execute_pub = rospy.Publisher("/rviz/moveit/execute", Empty, queue_size=5)
+        #self.update_start_state_pub = rospy.Publisher("/rviz/moveit/update_start_state", Empty, queue_size=5)
+        #self.update_goal_state_pub = rospy.Publisher("/rviz/moveit/update_goal_state", Empty, queue_size=5)
+        #self.interactive_marker_sub = rospy.Subscriber("/rviz_moveit_motion_planning_display/robot_interaction_interactive_marker_topic/update_full",
+        #                                               InteractiveMarkerInit,
+        #                                               self.markerCB, queue_size=1)
+        #self.sub = rospy.Subscriber("/joy", Joy, self.joyCB, queue_size=1)
     def updatePlanningGroup(self, next_index):
+
+        rospy.loginfo("planing group length = " + str(len(self.planning_groups_keys)))
+
         if next_index >= len(self.planning_groups_keys):
             self.current_planning_group_index = 0
         elif next_index < 0:
@@ -405,6 +413,7 @@ class MoveitJoy:
             raise rospy.ROSInitException(msg)
         rospy.loginfo("Changed planning group to " + next_planning_group)
         self.plan_group_pub.publish(next_planning_group)
+
     def updatePoseTopic(self, next_index, wait=True):
         planning_group = self.planning_groups_keys[self.current_planning_group_index]
         topics = self.planning_groups[planning_group]

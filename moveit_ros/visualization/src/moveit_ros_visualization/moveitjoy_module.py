@@ -405,6 +405,7 @@ class MoveitJoy:
             raise rospy.ROSInitException(msg)
         rospy.loginfo("Changed planning group to " + next_planning_group)
         self.plan_group_pub.publish(next_planning_group)
+
     def updatePoseTopic(self, next_index, wait=True):
         planning_group = self.planning_groups_keys[self.current_planning_group_index]
         topics = self.planning_groups[planning_group]
@@ -416,11 +417,12 @@ class MoveitJoy:
             self.current_eef_index = next_index
         next_topic = topics[self.current_eef_index]
 
-        rospy.loginfo("Changed controlled end effector to " + self.planning_groups_tips[planning_group][self.current_eef_index])
+        rospy.loginfo("Changed control to " + self.planning_groups_tips[planning_group][self.current_eef_index])
         self.pose_pub = rospy.Publisher(next_topic, PoseStamped, queue_size=5)
         if wait:
             self.waitForInitialPose(next_topic)
         self.current_pose_topic = next_topic
+
     def markerCB(self, msg):
         try:
             self.marker_lock.acquire()
@@ -428,7 +430,8 @@ class MoveitJoy:
                 return
             self.initial_poses = {}
             for marker in msg.markers:
-                if marker.name.startswith("EE:goal_"):
+                print "marker = " + str(marker)
+                if marker.name.startswith("JJ:goal_"):
                     # resolve tf
                     if marker.header.frame_id != self.frame_id:
                         ps = PoseStamped(header=marker.header, pose=marker.pose)
@@ -441,6 +444,7 @@ class MoveitJoy:
                         self.initial_poses[marker.name[3:]] = marker.pose   #tf should be resolved
         finally:
             self.marker_lock.release()
+
     def waitForInitialPose(self, next_topic, timeout=None):
         counter = 0
         while not rospy.is_shutdown():
@@ -456,12 +460,13 @@ class MoveitJoy:
                     self.initialize_poses = False
                     return True
                 else:
-                    rospy.logdebug(self.initial_poses.keys())
+                    rospy.loginfo(self.initial_poses.keys())
                     rospy.loginfo("Waiting for pose topic of '%s' to be initialized",
                                   topic_suffix)
                     rospy.sleep(1)
             finally:
                 self.marker_lock.release()
+
     def joyCB(self, msg):
         if len(msg.axes) == 27 and len(msg.buttons) == 19:
             status = PS3WiredStatus(msg)
@@ -473,6 +478,7 @@ class MoveitJoy:
             raise Exception("Unknown joystick")
         self.run(status)
         self.history.add(status)
+
     def computePoseFromJoy(self, pre_pose, status):
         new_pose = PoseStamped()
         new_pose.header.frame_id = self.frame_id
@@ -546,6 +552,7 @@ class MoveitJoy:
         new_pose.pose.orientation.z = new_q[2]
         new_pose.pose.orientation.w = new_q[3]
         return new_pose
+
     def run(self, status):
         if not self.initialized:
             # when not initialized, we will force to change planning_group

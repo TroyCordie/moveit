@@ -445,7 +445,7 @@ void MotionPlanningFrame::enable()
 {
   ui_->planning_algorithm_combo_box->clear();
   ui_->library_label->setText("NO PLANNING LIBRARY LOADED");
-  ui_->library_label->setStyleSheet("QLabel { color : red; font: bold }");
+  //ui_->library_label->setStyleSheet("QLabel { color : red; font: bold }");
   ui_->object_status->setText("");
 
   // activate the frame

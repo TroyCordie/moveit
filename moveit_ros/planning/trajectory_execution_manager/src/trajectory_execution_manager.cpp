@@ -949,40 +949,50 @@ bool TrajectoryExecutionManager::validate(const TrajectoryExecutionContext& cont
     return false;
   }
 
+
   for (const auto& trajectory : context.trajectory_parts_)
   {
-    const std::vector<double>& positions = trajectory.joint_trajectory.points.front().positions;
-    const std::vector<std::string>& joint_names = trajectory.joint_trajectory.joint_names;
-    const std::size_t n = joint_names.size();
-    if (positions.size() != n)
+    if(!trajectory.joint_trajectory.points.empty())
     {
-      ROS_ERROR_NAMED("traj_execution", "Wrong trajectory: #joints: %zu != #positions: %zu", n, positions.size());
-      return false;
+      const std::vector<double>& positions = trajectory.joint_trajectory.points.front().positions;
+      const std::vector<std::string>& joint_names = trajectory.joint_trajectory.joint_names;
+      const std::size_t n = joint_names.size();
+
+      if (positions.size() != n)
+      {
+        ROS_ERROR_NAMED("traj_execution", "Wrong trajectory: #joints: %zu != #positions: %zu", n, positions.size());
+        return false;
+      }
+
+      for (std::size_t i = 0; i < n; ++i)
+      {
+        const robot_model::JointModel* jm = current_state->getJointModel(joint_names[i]);
+        if (!jm)
+        {
+          ROS_ERROR_STREAM_NAMED("traj_execution", "Unknown joint in trajectory: " << joint_names[i]);
+          return false;
+        }
+
+        // TODO: check multi-DoF joints ?
+        double cur_position = current_state->getJointPositions(jm)[0];
+        double traj_position = positions[i];
+        // normalize positions and compare
+        jm->enforcePositionBounds(&cur_position);
+        jm->enforcePositionBounds(&traj_position);
+        if (fabs(cur_position - traj_position) > allowed_start_tolerance_)
+        {
+          ROS_ERROR_NAMED("traj_execution",
+                          "\nInvalid Trajectory: start point deviates from current robot state more than %g"
+                          "\njoint '%s': expected: %g, current: %g",
+                          allowed_start_tolerance_, joint_names[i].c_str(), traj_position, cur_position);
+          return false;
+        }
+      }
     }
-
-    for (std::size_t i = 0; i < n; ++i)
+    else if(!trajectory.multi_dof_joint_trajectory.points.empty())
     {
-      const robot_model::JointModel* jm = current_state->getJointModel(joint_names[i]);
-      if (!jm)
-      {
-        ROS_ERROR_STREAM_NAMED("traj_execution", "Unknown joint in trajectory: " << joint_names[i]);
-        return false;
-      }
-
-      // TODO: check multi-DoF joints ?
-      double cur_position = current_state->getJointPositions(jm)[0];
-      double traj_position = positions[i];
-      // normalize positions and compare
-      jm->enforcePositionBounds(&cur_position);
-      jm->enforcePositionBounds(&traj_position);
-      if (fabs(cur_position - traj_position) > allowed_start_tolerance_)
-      {
-        ROS_ERROR_NAMED("traj_execution",
-                        "\nInvalid Trajectory: start point deviates from current robot state more than %g"
-                        "\njoint '%s': expected: %g, current: %g",
-                        allowed_start_tolerance_, joint_names[i].c_str(), traj_position, cur_position);
-        return false;
-      }
+      ROS_INFO_NAMED("move_group", "multi dof joint trajectory valadation not implmented");
+      return true;
     }
   }
   return true;
@@ -1152,11 +1162,13 @@ void TrajectoryExecutionManager::execute(const ExecutionCompleteCallback& callba
 void TrajectoryExecutionManager::execute(const ExecutionCompleteCallback& callback,
                                          const PathSegmentCompleteCallback& part_callback, bool auto_clear)
 {
+  ROS_INFO_NAMED("move_group", "TrajectoryExecutionManager::execute");
   stopExecution(false);
 
   // check whether first trajectory starts at current robot state
   if (trajectories_.size() && !validate(*trajectories_.front()))
   {
+
     last_execution_status_ = moveit_controller_manager::ExecutionStatus::ABORTED;
     if (auto_clear)
       clear();
@@ -1164,9 +1176,9 @@ void TrajectoryExecutionManager::execute(const ExecutionCompleteCallback& callba
       callback(last_execution_status_);
     return;
   }
-
   // start the execution thread
   execution_complete_ = false;
+
   execution_thread_.reset(
       new boost::thread(&TrajectoryExecutionManager::executeThread, this, callback, part_callback, auto_clear));
 }

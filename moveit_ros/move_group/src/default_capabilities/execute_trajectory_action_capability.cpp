@@ -68,8 +68,9 @@ void MoveGroupExecuteTrajectoryAction::executePathCallback(const moveit_msgs::Ex
     execute_action_server_->setAborted(action_res, response);
     return;
   }
-
+  ROS_INFO_NAMED("move_group", "we calling this?");
   executePathCallback_Execute(goal, action_res);
+  ROS_INFO_NAMED("move_group", "made it out?");
 
   std::string response = getActionResultString(action_res.error_code, false, false);
   if (action_res.error_code.val == moveit_msgs::MoveItErrorCodes::SUCCESS)
@@ -94,11 +95,17 @@ void MoveGroupExecuteTrajectoryAction::executePathCallback_Execute(
   ROS_INFO_NAMED("move_group", "Execution request received for ExecuteTrajectory action.");
 
   context_->trajectory_execution_manager_->clear();
+
+  
   if (context_->trajectory_execution_manager_->push(goal->trajectory))
   {
+
     setExecuteTrajectoryState(MONITOR);
+
     context_->trajectory_execution_manager_->execute();
+
     moveit_controller_manager::ExecutionStatus es = context_->trajectory_execution_manager_->waitForExecution();
+
     if (es == moveit_controller_manager::ExecutionStatus::SUCCEEDED)
     {
       action_res.error_code.val = moveit_msgs::MoveItErrorCodes::SUCCESS;

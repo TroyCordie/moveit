@@ -284,7 +284,7 @@ void MotionPlanningFrame::populatePlannersList(const moveit_msgs::PlannerInterfa
 
   // set the label for the planning library
   ui_->library_label->setText(QString::fromStdString(desc.name));
-  ui_->library_label->setStyleSheet("QLabel { color : green; font: bold }");
+  //ui_->library_label->setStyleSheet("QLabel { color : green; font: bold }");
 
   bool found_group = false;
   // the name of a planner is either "GROUP[planner_id]" or "planner_id"

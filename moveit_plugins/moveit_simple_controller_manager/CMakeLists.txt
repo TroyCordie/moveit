@@ -15,7 +15,10 @@ find_package(catkin COMPONENTS
   actionlib
   roscpp
   control_msgs
+  ney_wheel_action_controler
   REQUIRED)
+
+include_directories(${ney_wheel_action_controler_INCLUDE_DIRS})
 
 include_directories(include)
 

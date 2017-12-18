@@ -38,6 +38,7 @@
 #include <moveit/robot_state/robot_state.h>
 #include <moveit_ros_planning/TrajectoryExecutionDynamicReconfigureConfig.h>
 #include <dynamic_reconfigure/server.h>
+#include <eigen_conversions/eigen_msg.h>
 
 namespace trajectory_execution_manager
 {
@@ -864,22 +865,22 @@ bool TrajectoryExecutionManager::distributeTrajectory(const moveit_msgs::RobotTr
               parts[i].multi_dof_joint_trajectory.points[j].velocities.resize(bijection.size());
 
               parts[i].multi_dof_joint_trajectory.points[j].velocities[0].linear.x =
-                trajectory.multi_dof_joint_trajectory.points[j].velocities[0].linear.x * execution_velocity_scaling_;
+                  trajectory.multi_dof_joint_trajectory.points[j].velocities[0].linear.x * execution_velocity_scaling_;
 
               parts[i].multi_dof_joint_trajectory.points[j].velocities[0].linear.y =
-                trajectory.multi_dof_joint_trajectory.points[j].velocities[0].linear.y * execution_velocity_scaling_;
+                  trajectory.multi_dof_joint_trajectory.points[j].velocities[0].linear.y * execution_velocity_scaling_;
 
               parts[i].multi_dof_joint_trajectory.points[j].velocities[0].linear.z =
-                trajectory.multi_dof_joint_trajectory.points[j].velocities[0].linear.z * execution_velocity_scaling_;
+                  trajectory.multi_dof_joint_trajectory.points[j].velocities[0].linear.z * execution_velocity_scaling_;
 
               parts[i].multi_dof_joint_trajectory.points[j].velocities[0].angular.x =
-                trajectory.multi_dof_joint_trajectory.points[j].velocities[0].angular.x * execution_velocity_scaling_;
+                  trajectory.multi_dof_joint_trajectory.points[j].velocities[0].angular.x * execution_velocity_scaling_;
 
               parts[i].multi_dof_joint_trajectory.points[j].velocities[0].angular.y =
-                trajectory.multi_dof_joint_trajectory.points[j].velocities[0].angular.y * execution_velocity_scaling_;
+                  trajectory.multi_dof_joint_trajectory.points[j].velocities[0].angular.y * execution_velocity_scaling_;
 
               parts[i].multi_dof_joint_trajectory.points[j].velocities[0].angular.z =
-                trajectory.multi_dof_joint_trajectory.points[j].velocities[0].angular.z * execution_velocity_scaling_;
+                  trajectory.multi_dof_joint_trajectory.points[j].velocities[0].angular.z * execution_velocity_scaling_;
             }
           }
         }
@@ -952,12 +953,12 @@ bool TrajectoryExecutionManager::validate(const TrajectoryExecutionContext& cont
 
   for (const auto& trajectory : context.trajectory_parts_)
   {
-    if(!trajectory.joint_trajectory.points.empty())
+    if (!trajectory.joint_trajectory.points.empty())
     {
+      // Check single-dof trajectory
       const std::vector<double>& positions = trajectory.joint_trajectory.points.front().positions;
       const std::vector<std::string>& joint_names = trajectory.joint_trajectory.joint_names;
       const std::size_t n = joint_names.size();
-
       if (positions.size() != n)
       {
         ROS_ERROR_NAMED("traj_execution", "Wrong trajectory: #joints: %zu != #positions: %zu", n, positions.size());
@@ -973,7 +974,6 @@ bool TrajectoryExecutionManager::validate(const TrajectoryExecutionContext& cont
           return false;
         }
 
-        // TODO: check multi-DoF joints ?
         double cur_position = current_state->getJointPositions(jm)[0];
         double traj_position = positions[i];
         // normalize positions and compare
@@ -985,6 +985,44 @@ bool TrajectoryExecutionManager::validate(const TrajectoryExecutionContext& cont
                           "\nInvalid Trajectory: start point deviates from current robot state more than %g"
                           "\njoint '%s': expected: %g, current: %g",
                           allowed_start_tolerance_, joint_names[i].c_str(), traj_position, cur_position);
+          return false;
+        }
+      }
+    }
+    if (!trajectory.multi_dof_joint_trajectory.points.empty())
+    {
+      // Check multi-dof trajectory
+      const std::vector<geometry_msgs::Transform>& transforms =
+          trajectory.multi_dof_joint_trajectory.points.front().transforms;
+      const std::vector<std::string>& joint_names = trajectory.joint_trajectory.joint_names;
+      const std::size_t n = joint_names.size();
+      if (transforms.size() != n)
+      {
+        ROS_ERROR_NAMED("traj_execution", "Wrong trajectory: #joints: %zu != #transforms: %zu", n, transforms.size());
+        return false;
+      }
+
+      for (std::size_t i = 0; i < n; ++i)
+      {
+        const robot_model::JointModel* jm = current_state->getJointModel(joint_names[i]);
+        if (!jm)
+        {
+          ROS_ERROR_STREAM_NAMED("traj_execution", "Unknown joint in trajectory: " << joint_names[i]);
+          return false;
+        }
+
+        Eigen::Affine3d cur_transform, start_transform;
+        jm->computeTransform(current_state->getJointPositions(jm), cur_transform);
+        tf::transformMsgToEigen(transforms[i], start_transform);
+        Eigen::Vector3d offset = cur_transform.translation() - start_transform.translation();
+        Eigen::AngleAxisd rotation;
+        rotation.fromRotationMatrix(cur_transform.rotation().inverse() * start_transform.rotation());
+        if ((offset.array() > allowed_start_tolerance_).any() || rotation.angle() > allowed_start_tolerance_)
+        {
+          ROS_ERROR_STREAM_NAMED("traj_execution",
+                                 "\nInvalid Trajectory: start point deviates from current robot state more than "
+                                     << allowed_start_tolerance_ << "\njoint '" << joint_names[i]
+                                     << "': pos delta: " << offset.transpose() << " rot delta: " << rotation.angle());
           return false;
         }
       }
@@ -1360,7 +1398,8 @@ bool TrajectoryExecutionManager::executePart(std::size_t part_index)
     for (std::size_t i = 0; i < context.trajectory_parts_.size(); ++i)
     {
       ros::Duration d(0.0);
-      if (!context.trajectory_parts_[i].joint_trajectory.points.empty())
+      if (!(context.trajectory_parts_[i].joint_trajectory.points.empty() &&
+            context.trajectory_parts_[i].multi_dof_joint_trajectory.points.empty()))
       {
         if (context.trajectory_parts_[i].joint_trajectory.header.stamp > current_time)
           d = context.trajectory_parts_[i].joint_trajectory.header.stamp - current_time;

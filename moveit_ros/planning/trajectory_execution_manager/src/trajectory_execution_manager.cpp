@@ -992,6 +992,8 @@ bool TrajectoryExecutionManager::validate(const TrajectoryExecutionContext& cont
     if (!trajectory.multi_dof_joint_trajectory.points.empty())
     {
       // Check multi-dof trajectory
+      ROS_INFO_NAMED("move_group", "multi dof joint trajectory valadation not implmented");
+      return true;
       const std::vector<geometry_msgs::Transform>& transforms =
           trajectory.multi_dof_joint_trajectory.points.front().transforms;
       const std::vector<std::string>& joint_names = trajectory.joint_trajectory.joint_names;

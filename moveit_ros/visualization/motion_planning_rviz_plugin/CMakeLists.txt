@@ -1,3 +1,7 @@
+if(roscpp_VERSION VERSION_LESS 1.14) # Pre-Melodic release. TODO: Remove when Kinetic support is dropped
+  add_definitions(-DROS_KINETIC)
+endif()
+
 set(HEADERS
   include/moveit/motion_planning_rviz_plugin/motion_planning_display.h
   include/moveit/motion_planning_rviz_plugin/motion_planning_frame.h
@@ -32,7 +36,7 @@ add_library(${MOVEIT_LIB_NAME} src/plugin_init.cpp)
 set_target_properties(${MOVEIT_LIB_NAME} PROPERTIES VERSION ${${PROJECT_NAME}_VERSION})
 target_link_libraries(${MOVEIT_LIB_NAME} ${MOVEIT_LIB_NAME}_core ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 
-install(DIRECTORY include/ DESTINATION include)
+install(DIRECTORY include/ DESTINATION ${CATKIN_GLOBAL_INCLUDE_DESTINATION})
 
 install(TARGETS ${MOVEIT_LIB_NAME} ${MOVEIT_LIB_NAME}_core
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}

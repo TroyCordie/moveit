@@ -38,7 +38,7 @@
 #define MOVEIT_OCCUPANCY_MAP_DEPTH_IMAGE_OCCUPANCY_MAP_UPDATER_
 
 #include <ros/ros.h>
-#include <tf/tf.h>
+#include <tf2_ros/buffer.h>
 #include <moveit/occupancy_map_monitor/occupancy_map_updater.h>
 #include <moveit/mesh_filter/mesh_filter.h>
 #include <moveit/mesh_filter/stereo_camera_model.h>
@@ -67,7 +67,7 @@ private:
   void stopHelper();
 
   ros::NodeHandle nh_;
-  boost::shared_ptr<tf::Transformer> tf_;
+  std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
   image_transport::ImageTransport input_depth_transport_;
   image_transport::ImageTransport model_depth_transport_;
   image_transport::ImageTransport filtered_depth_transport_;
@@ -78,6 +78,8 @@ private:
   image_transport::CameraPublisher pub_filtered_depth_image_;
   image_transport::CameraPublisher pub_filtered_label_image_;
 
+  ros::Time last_update_time_;
+
   std::string filtered_cloud_topic_;
   std::string sensor_type_;
   std::string image_topic_;
@@ -87,6 +89,7 @@ private:
   double shadow_threshold_;
   double padding_scale_;
   double padding_offset_;
+  double max_update_rate_;
   unsigned int skip_vertical_pixels_;
   unsigned int skip_horizontal_pixels_;
 

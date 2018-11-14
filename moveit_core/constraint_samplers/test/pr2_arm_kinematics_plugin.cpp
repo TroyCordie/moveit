@@ -36,8 +36,7 @@
 
 #include <geometry_msgs/PoseStamped.h>
 #include <kdl_parser/kdl_parser.hpp>
-#include <eigen_conversions/eigen_msg.h>
-#include <eigen_conversions/eigen_kdl.h>
+#include <tf2_kdl/tf2_kdl.h>
 #include <algorithm>
 #include <numeric>
 
@@ -98,6 +97,12 @@ PR2ArmIKSolver::PR2ArmIKSolver(const urdf::ModelInterface& robot_model, const st
     active_ = true;
 }
 
+void PR2ArmIKSolver::updateInternalDataStructures()
+{
+  // TODO: move (re)allocation of any internal data structures here
+  // to react to changes in chain
+}
+
 int PR2ArmIKSolver::CartToJnt(const KDL::JntArray& q_init, const KDL::Frame& p_in, KDL::JntArray& q_out)
 {
   const bool verbose = false;
@@ -154,7 +159,7 @@ int PR2ArmIKSolver::CartToJnt(const KDL::JntArray& q_init, const KDL::Frame& p_i
     return -1;
 }
 
-int PR2ArmIKSolver::CartToJntSearch(const KDL::JntArray& q_in, const KDL::Frame& p_in, KDL::JntArray& q_out,
+int PR2ArmIKSolver::cartToJntSearch(const KDL::JntArray& q_in, const KDL::Frame& p_in, KDL::JntArray& q_out,
                                     const double& timeout)
 {
   const bool verbose = false;
@@ -256,9 +261,7 @@ PR2ArmKinematicsPlugin::PR2ArmKinematicsPlugin() : active_(false)
 
 bool PR2ArmKinematicsPlugin::isActive()
 {
-  if (active_)
-    return true;
-  return false;
+  return active_;
 }
 
 void PR2ArmKinematicsPlugin::setRobotModel(urdf::ModelInterfaceSharedPtr& robot_model)
@@ -276,7 +279,7 @@ bool PR2ArmKinematicsPlugin::initialize(const std::string& robot_description, co
   dimension_ = 7;
 
   ROS_DEBUG_NAMED("pr2_arm_kinematics_plugin", "Loading KDL Tree");
-  if (!getKDLChain(*robot_model_.get(), base_frame_, tip_frame_, kdl_chain_))
+  if (!getKDLChain(*robot_model_, base_frame_, tip_frame_, kdl_chain_))
   {
     active_ = false;
     ROS_ERROR("Could not load kdl tree");
@@ -284,7 +287,7 @@ bool PR2ArmKinematicsPlugin::initialize(const std::string& robot_description, co
   jnt_to_pose_solver_.reset(new KDL::ChainFkSolverPos_recursive(kdl_chain_));
   free_angle_ = 2;
 
-  pr2_arm_ik_solver_.reset(new pr2_arm_kinematics::PR2ArmIKSolver(*robot_model_.get(), base_frame_, tip_frame_,
+  pr2_arm_ik_solver_.reset(new pr2_arm_kinematics::PR2ArmIKSolver(*robot_model_, base_frame_, tip_frame_,
                                                                   search_discretization_, free_angle_));
   if (!pr2_arm_ik_solver_->active_)
   {
@@ -340,9 +343,7 @@ bool PR2ArmKinematicsPlugin::searchPositionIK(const geometry_msgs::Pose& ik_pose
     return false;
   }
   KDL::Frame pose_desired;
-  Eigen::Affine3d tp;
-  tf::poseMsgToEigen(ik_pose, tp);
-  tf::transformEigenToKDL(tp, pose_desired);
+  tf2::fromMsg(ik_pose, pose_desired);
 
   // Do the IK
   KDL::JntArray jnt_pos_in;
@@ -353,7 +354,7 @@ bool PR2ArmKinematicsPlugin::searchPositionIK(const geometry_msgs::Pose& ik_pose
     jnt_pos_in(i) = ik_seed_state[i];
   }
 
-  int ik_valid = pr2_arm_ik_solver_->CartToJntSearch(jnt_pos_in, pose_desired, jnt_pos_out, timeout);
+  int ik_valid = pr2_arm_ik_solver_->cartToJntSearch(jnt_pos_in, pose_desired, jnt_pos_out, timeout);
   if (ik_valid == pr2_arm_kinematics::NO_IK_SOLUTION)
   {
     error_code.val = error_code.NO_IK_SOLUTION;

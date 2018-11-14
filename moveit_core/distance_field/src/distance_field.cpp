@@ -37,13 +37,15 @@
 #include <moveit/distance_field/distance_field.h>
 #include <moveit/distance_field/find_internal_points.h>
 #include <geometric_shapes/body_operations.h>
-#include <eigen_conversions/eigen_msg.h>
-#include <console_bridge/console.h>
+#include <tf2_eigen/tf2_eigen.h>
+#include <ros/console.h>
 #include <octomap/octomap.h>
 #include <octomap/OcTree.h>
 
-distance_field::DistanceField::DistanceField(double size_x, double size_y, double size_z, double resolution,
-                                             double origin_x, double origin_y, double origin_z)
+namespace distance_field
+{
+DistanceField::DistanceField(double size_x, double size_y, double size_z, double resolution, double origin_x,
+                             double origin_y, double origin_z)
   : size_x_(size_x)
   , size_y_(size_y)
   , size_z_(size_z)
@@ -55,12 +57,10 @@ distance_field::DistanceField::DistanceField(double size_x, double size_y, doubl
 {
 }
 
-distance_field::DistanceField::~DistanceField()
-{
-}
+DistanceField::~DistanceField() = default;
 
-double distance_field::DistanceField::getDistanceGradient(double x, double y, double z, double& gradient_x,
-                                                          double& gradient_y, double& gradient_z, bool& in_bounds) const
+double DistanceField::getDistanceGradient(double x, double y, double z, double& gradient_x, double& gradient_y,
+                                          double& gradient_z, bool& in_bounds) const
 {
   int gx, gy, gz;
 
@@ -85,9 +85,8 @@ double distance_field::DistanceField::getDistanceGradient(double x, double y, do
   return getDistance(gx, gy, gz);
 }
 
-void distance_field::DistanceField::getIsoSurfaceMarkers(double min_distance, double max_distance,
-                                                         const std::string& frame_id, const ros::Time stamp,
-                                                         visualization_msgs::Marker& inf_marker) const
+void DistanceField::getIsoSurfaceMarkers(double min_distance, double max_distance, const std::string& frame_id,
+                                         const ros::Time stamp, visualization_msgs::Marker& inf_marker) const
 {
   inf_marker.points.clear();
   inf_marker.header.frame_id = frame_id;
@@ -130,13 +129,12 @@ void distance_field::DistanceField::getIsoSurfaceMarkers(double min_distance, do
   }
 }
 
-void distance_field::DistanceField::getGradientMarkers(double min_distance, double max_distance,
-                                                       const std::string& frame_id, const ros::Time& stamp,
-                                                       visualization_msgs::MarkerArray& marker_array) const
+void DistanceField::getGradientMarkers(double min_distance, double max_distance, const std::string& frame_id,
+                                       const ros::Time& stamp, visualization_msgs::MarkerArray& marker_array) const
 {
-  Eigen::Vector3d unitX(1, 0, 0);
-  Eigen::Vector3d unitY(0, 1, 0);
-  Eigen::Vector3d unitZ(0, 0, 1);
+  Eigen::Vector3d unit_x(1, 0, 0);
+  Eigen::Vector3d unit_y(0, 1, 0);
+  Eigen::Vector3d unit_z(0, 0, 1);
 
   int id = 0;
 
@@ -146,13 +144,13 @@ void distance_field::DistanceField::getGradientMarkers(double min_distance, doub
     {
       for (int z = 0; z < getZNumCells(); ++z)
       {
-        double worldX, worldY, worldZ;
-        gridToWorld(x, y, z, worldX, worldY, worldZ);
+        double world_x, world_y, world_z;
+        gridToWorld(x, y, z, world_x, world_y, world_z);
 
-        double gradientX, gradientY, gradientZ;
+        double gradient_x, gradient_y, gradient_z;
         bool in_bounds;
-        double distance = getDistanceGradient(worldX, worldY, worldZ, gradientX, gradientY, gradientZ, in_bounds);
-        Eigen::Vector3d gradient(gradientX, gradientY, gradientZ);
+        double distance = getDistanceGradient(world_x, world_y, world_z, gradient_x, gradient_y, gradient_z, in_bounds);
+        Eigen::Vector3d gradient(gradient_x, gradient_y, gradient_z);
 
         if (in_bounds && distance >= min_distance && distance <= max_distance && gradient.norm() > 0)
         {
@@ -166,9 +164,9 @@ void distance_field::DistanceField::getGradientMarkers(double min_distance, doub
           marker.type = visualization_msgs::Marker::ARROW;
           marker.action = visualization_msgs::Marker::ADD;
 
-          marker.pose.position.x = worldX;
-          marker.pose.position.y = worldY;
-          marker.pose.position.z = worldZ;
+          marker.pose.position.x = world_x;
+          marker.pose.position.y = world_y;
+          marker.pose.position.z = world_z;
 
           // Eigen::Vector3d axis = gradient.cross(unitX).norm() > 0 ? gradient.cross(unitX) : unitY;
           // double angle = -gradient.angle(unitX);
@@ -195,15 +193,15 @@ void distance_field::DistanceField::getGradientMarkers(double min_distance, doub
   }
 }
 
-bool distance_field::DistanceField::getShapePoints(const shapes::Shape* shape, const Eigen::Affine3d& pose,
-                                                   EigenSTL::vector_Vector3d* points)
+bool DistanceField::getShapePoints(const shapes::Shape* shape, const Eigen::Affine3d& pose,
+                                   EigenSTL::vector_Vector3d* points)
 {
   if (shape->type == shapes::OCTREE)
   {
     const shapes::OcTree* oc = dynamic_cast<const shapes::OcTree*>(shape);
     if (!oc)
     {
-      logError("Problem dynamic casting shape that claims to be OcTree");
+      ROS_ERROR_NAMED("distance_field", "Problem dynamic casting shape that claims to be OcTree");
       return false;
     }
     getOcTreePoints(oc->octree.get(), points);
@@ -218,7 +216,7 @@ bool distance_field::DistanceField::getShapePoints(const shapes::Shape* shape, c
   return true;
 }
 
-void distance_field::DistanceField::addShapeToField(const shapes::Shape* shape, const Eigen::Affine3d& pose)
+void DistanceField::addShapeToField(const shapes::Shape* shape, const Eigen::Affine3d& pose)
 {
   EigenSTL::vector_Vector3d point_vec;
   getShapePoints(shape, pose, &point_vec);
@@ -226,14 +224,14 @@ void distance_field::DistanceField::addShapeToField(const shapes::Shape* shape, 
 }
 
 // DEPRECATED
-void distance_field::DistanceField::addShapeToField(const shapes::Shape* shape, const geometry_msgs::Pose& pose)
+void DistanceField::addShapeToField(const shapes::Shape* shape, const geometry_msgs::Pose& pose)
 {
   Eigen::Affine3d pose_e;
-  tf::poseMsgToEigen(pose, pose_e);
+  tf2::fromMsg(pose, pose_e);
   addShapeToField(shape, pose_e);
 }
 
-void distance_field::DistanceField::getOcTreePoints(const octomap::OcTree* octree, EigenSTL::vector_Vector3d* points)
+void DistanceField::getOcTreePoints(const octomap::OcTree* octree, EigenSTL::vector_Vector3d* points)
 {
   // lower extent
   double min_x, min_y, min_z;
@@ -279,19 +277,19 @@ void distance_field::DistanceField::getOcTreePoints(const octomap::OcTree* octre
   }
 }
 
-void distance_field::DistanceField::addOcTreeToField(const octomap::OcTree* octree)
+void DistanceField::addOcTreeToField(const octomap::OcTree* octree)
 {
   EigenSTL::vector_Vector3d points;
   getOcTreePoints(octree, &points);
   addPointsToField(points);
 }
 
-void distance_field::DistanceField::moveShapeInField(const shapes::Shape* shape, const Eigen::Affine3d& old_pose,
-                                                     const Eigen::Affine3d& new_pose)
+void DistanceField::moveShapeInField(const shapes::Shape* shape, const Eigen::Affine3d& old_pose,
+                                     const Eigen::Affine3d& new_pose)
 {
   if (shape->type == shapes::OCTREE)
   {
-    logWarn("Move shape not supported for Octree");
+    ROS_WARN_NAMED("distance_field", "Move shape not supported for Octree");
     return;
   }
   bodies::Body* body = bodies::createBodyFromShape(shape);
@@ -306,16 +304,16 @@ void distance_field::DistanceField::moveShapeInField(const shapes::Shape* shape,
 }
 
 // DEPRECATED
-void distance_field::DistanceField::moveShapeInField(const shapes::Shape* shape, const geometry_msgs::Pose& old_pose,
-                                                     const geometry_msgs::Pose& new_pose)
+void DistanceField::moveShapeInField(const shapes::Shape* shape, const geometry_msgs::Pose& old_pose,
+                                     const geometry_msgs::Pose& new_pose)
 {
   Eigen::Affine3d old_pose_e, new_pose_e;
-  tf::poseMsgToEigen(old_pose, old_pose_e);
-  tf::poseMsgToEigen(new_pose, new_pose_e);
+  tf2::fromMsg(old_pose, old_pose_e);
+  tf2::fromMsg(new_pose, new_pose_e);
   moveShapeInField(shape, old_pose_e, new_pose_e);
 }
 
-void distance_field::DistanceField::removeShapeFromField(const shapes::Shape* shape, const Eigen::Affine3d& pose)
+void DistanceField::removeShapeFromField(const shapes::Shape* shape, const Eigen::Affine3d& pose)
 {
   bodies::Body* body = bodies::createBodyFromShape(shape);
   body->setPose(pose);
@@ -326,17 +324,16 @@ void distance_field::DistanceField::removeShapeFromField(const shapes::Shape* sh
 }
 
 // DEPRECATED
-void distance_field::DistanceField::removeShapeFromField(const shapes::Shape* shape, const geometry_msgs::Pose& pose)
+void DistanceField::removeShapeFromField(const shapes::Shape* shape, const geometry_msgs::Pose& pose)
 {
   Eigen::Affine3d pose_e;
-  tf::poseMsgToEigen(pose, pose_e);
+  tf2::fromMsg(pose, pose_e);
   removeShapeFromField(shape, pose_e);
 }
 
-void distance_field::DistanceField::getPlaneMarkers(distance_field::PlaneVisualizationType type, double length,
-                                                    double width, double height, const Eigen::Vector3d& origin,
-                                                    const std::string& frame_id, const ros::Time stamp,
-                                                    visualization_msgs::Marker& plane_marker) const
+void DistanceField::getPlaneMarkers(PlaneVisualizationType type, double length, double width, double height,
+                                    const Eigen::Vector3d& origin, const std::string& frame_id, const ros::Time stamp,
+                                    visualization_msgs::Marker& plane_marker) const
 {
   plane_marker.header.frame_id = frame_id;
   plane_marker.header.stamp = stamp;
@@ -352,67 +349,67 @@ void distance_field::DistanceField::getPlaneMarkers(distance_field::PlaneVisuali
   plane_marker.points.reserve(100000);
   plane_marker.colors.reserve(100000);
 
-  double minX = 0;
-  double maxX = 0;
-  double minY = 0;
-  double maxY = 0;
-  double minZ = 0;
-  double maxZ = 0;
+  double min_x = 0;
+  double max_x = 0;
+  double min_y = 0;
+  double max_y = 0;
+  double min_z = 0;
+  double max_z = 0;
 
   switch (type)
   {
     case XYPlane:
-      minZ = height;
-      maxZ = height;
+      min_z = height;
+      max_z = height;
 
-      minX = -length / 2.0;
-      maxX = length / 2.0;
-      minY = -width / 2.0;
-      maxY = width / 2.0;
+      min_x = -length / 2.0;
+      max_x = length / 2.0;
+      min_y = -width / 2.0;
+      max_y = width / 2.0;
       break;
     case XZPlane:
-      minY = height;
-      maxY = height;
+      min_y = height;
+      max_y = height;
 
-      minX = -length / 2.0;
-      maxX = length / 2.0;
-      minZ = -width / 2.0;
-      maxZ = width / 2.0;
+      min_x = -length / 2.0;
+      max_x = length / 2.0;
+      min_z = -width / 2.0;
+      max_z = width / 2.0;
       break;
     case YZPlane:
-      minX = height;
-      maxX = height;
+      min_x = height;
+      max_x = height;
 
-      minY = -length / 2.0;
-      maxY = length / 2.0;
-      minZ = -width / 2.0;
-      maxZ = width / 2.0;
+      min_y = -length / 2.0;
+      max_y = length / 2.0;
+      min_z = -width / 2.0;
+      max_z = width / 2.0;
       break;
   }
 
-  minX += origin.x();
-  minY += origin.y();
-  minZ += origin.z();
+  min_x += origin.x();
+  min_y += origin.y();
+  min_z += origin.z();
 
-  maxX += origin.x();
-  maxY += origin.y();
-  maxZ += origin.z();
+  max_x += origin.x();
+  max_y += origin.y();
+  max_z += origin.z();
 
-  int minXCell = 0;
-  int maxXCell = 0;
-  int minYCell = 0;
-  int maxYCell = 0;
-  int minZCell = 0;
-  int maxZCell = 0;
+  int min_x_cell = 0;
+  int max_x_cell = 0;
+  int min_y_cell = 0;
+  int max_y_cell = 0;
+  int min_z_cell = 0;
+  int max_z_cell = 0;
 
-  worldToGrid(minX, minY, minZ, minXCell, minYCell, minZCell);
-  worldToGrid(maxX, maxY, maxZ, maxXCell, maxYCell, maxZCell);
+  worldToGrid(min_x, min_y, min_z, min_x_cell, min_y_cell, min_z_cell);
+  worldToGrid(max_x, max_y, max_z, max_x_cell, max_y_cell, max_z_cell);
   plane_marker.color.a = 1.0;
-  for (int x = minXCell; x <= maxXCell; ++x)
+  for (int x = min_x_cell; x <= max_x_cell; ++x)
   {
-    for (int y = minYCell; y <= maxYCell; ++y)
+    for (int y = min_y_cell; y <= max_y_cell; ++y)
     {
-      for (int z = minZCell; z <= maxZCell; ++z)
+      for (int z = min_z_cell; z <= max_z_cell; ++z)
       {
         if (!isCellValid(x, y, z))
         {
@@ -445,8 +442,8 @@ void distance_field::DistanceField::getPlaneMarkers(distance_field::PlaneVisuali
   }
 }
 
-void distance_field::DistanceField::setPoint(int xCell, int yCell, int zCell, double dist, geometry_msgs::Point& point,
-                                             std_msgs::ColorRGBA& color, double max_distance) const
+void DistanceField::setPoint(int xCell, int yCell, int zCell, double dist, geometry_msgs::Point& point,
+                             std_msgs::ColorRGBA& color, double max_distance) const
 {
   double wx, wy, wz;
   gridToWorld(xCell, yCell, zCell, wx, wy, wz);
@@ -460,42 +457,42 @@ void distance_field::DistanceField::setPoint(int xCell, int yCell, int zCell, do
   color.b = dist / max_distance;  // dist/max_distance * 0.1;
 }
 
-void distance_field::DistanceField::getProjectionPlanes(const std::string& frame_id, const ros::Time& stamp,
-                                                        double max_dist, visualization_msgs::Marker& marker) const
+void DistanceField::getProjectionPlanes(const std::string& frame_id, const ros::Time& stamp, double max_dist,
+                                        visualization_msgs::Marker& marker) const
 {
-  int maxXCell = getXNumCells();
-  int maxYCell = getYNumCells();
-  int maxZCell = getZNumCells();
+  int max_x_cell = getXNumCells();
+  int max_y_cell = getYNumCells();
+  int max_z_cell = getZNumCells();
 
-  double* x_projection = new double[maxYCell * maxZCell];
-  double* y_projection = new double[maxZCell * maxXCell];
-  double* z_projection = new double[maxXCell * maxYCell];
+  double* x_projection = new double[max_y_cell * max_z_cell];
+  double* y_projection = new double[max_z_cell * max_x_cell];
+  double* z_projection = new double[max_x_cell * max_y_cell];
   double initial_val = sqrt(INT_MAX);
 
   // Initialize
-  for (int y = 0; y < maxYCell; y++)
-    for (int x = 0; x < maxXCell; x++)
-      z_projection[x + y * maxXCell] = initial_val;
+  for (int y = 0; y < max_y_cell; y++)
+    for (int x = 0; x < max_x_cell; x++)
+      z_projection[x + y * max_x_cell] = initial_val;
 
-  for (int z = 0; z < maxZCell; z++)
-    for (int y = 0; y < maxYCell; y++)
-      x_projection[y + z * maxYCell] = initial_val;
+  for (int z = 0; z < max_z_cell; z++)
+    for (int y = 0; y < max_y_cell; y++)
+      x_projection[y + z * max_y_cell] = initial_val;
 
-  for (int z = 0; z < maxZCell; z++)
-    for (int x = 0; x < maxXCell; x++)
-      y_projection[x + z * maxXCell] = initial_val;
+  for (int z = 0; z < max_z_cell; z++)
+    for (int x = 0; x < max_x_cell; x++)
+      y_projection[x + z * max_x_cell] = initial_val;
 
   // Calculate projections
-  for (int z = 0; z < maxZCell; z++)
+  for (int z = 0; z < max_z_cell; z++)
   {
-    for (int y = 0; y < maxYCell; y++)
+    for (int y = 0; y < max_y_cell; y++)
     {
-      for (int x = 0; x < maxXCell; x++)
+      for (int x = 0; x < max_x_cell; x++)
       {
         double dist = getDistance(x, y, z);
-        z_projection[x + y * maxXCell] = std::min(dist, z_projection[x + y * maxXCell]);
-        x_projection[y + z * maxYCell] = std::min(dist, x_projection[y + z * maxYCell]);
-        y_projection[x + z * maxXCell] = std::min(dist, y_projection[x + z * maxXCell]);
+        z_projection[x + y * max_x_cell] = std::min(dist, z_projection[x + y * max_x_cell]);
+        x_projection[y + z * max_y_cell] = std::min(dist, x_projection[y + z * max_y_cell]);
+        y_projection[x + z * max_x_cell] = std::min(dist, y_projection[x + z * max_x_cell]);
       }
     }
   }
@@ -516,37 +513,37 @@ void distance_field::DistanceField::getProjectionPlanes(const std::string& frame
 
   int x, y, z;
   int index = 0;
-  marker.points.resize(maxXCell * maxYCell + maxYCell * maxZCell + maxZCell * maxXCell);
-  marker.colors.resize(maxXCell * maxYCell + maxYCell * maxZCell + maxZCell * maxXCell);
+  marker.points.resize(max_x_cell * max_y_cell + max_y_cell * max_z_cell + max_z_cell * max_x_cell);
+  marker.colors.resize(max_x_cell * max_y_cell + max_y_cell * max_z_cell + max_z_cell * max_x_cell);
 
   z = 0;
-  for (y = 0; y < maxYCell; y++)
+  for (y = 0; y < max_y_cell; y++)
   {
-    for (x = 0; x < maxXCell; x++)
+    for (x = 0; x < max_x_cell; x++)
     {
-      double dist = z_projection[x + y * maxXCell];
+      double dist = z_projection[x + y * max_x_cell];
       setPoint(x, y, z, dist, marker.points[index], marker.colors[index], max_dist);
       index++;
     }
   }
 
   x = 0;
-  for (z = 0; z < maxZCell; z++)
+  for (z = 0; z < max_z_cell; z++)
   {
-    for (y = 0; y < maxYCell; y++)
+    for (y = 0; y < max_y_cell; y++)
     {
-      double dist = x_projection[y + z * maxYCell];
+      double dist = x_projection[y + z * max_y_cell];
       setPoint(x, y, z, dist, marker.points[index], marker.colors[index], max_dist);
       index++;
     }
   }
 
   y = 0;
-  for (z = 0; z < maxZCell; z++)
+  for (z = 0; z < max_z_cell; z++)
   {
-    for (x = 0; x < maxXCell; x++)
+    for (x = 0; x < max_x_cell; x++)
     {
-      double dist = y_projection[x + z * maxXCell];
+      double dist = y_projection[x + z * max_x_cell];
       setPoint(x, y, z, dist, marker.points[index], marker.colors[index], max_dist);
       index++;
     }
@@ -559,3 +556,5 @@ void distance_field::DistanceField::getProjectionPlanes(const std::string& frame
   if (z_projection)
     delete[] z_projection;
 }
+
+}  // end of namespace distance_field

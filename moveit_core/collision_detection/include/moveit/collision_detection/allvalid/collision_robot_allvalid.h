@@ -44,7 +44,7 @@ namespace collision_detection
 class CollisionRobotAllValid : public CollisionRobot
 {
 public:
-  CollisionRobotAllValid(const robot_model::RobotModelConstPtr& kmodel, double padding = 0.0, double scale = 1.0);
+  CollisionRobotAllValid(const robot_model::RobotModelConstPtr& robot_model, double padding = 0.0, double scale = 1.0);
   CollisionRobotAllValid(const CollisionRobot& other);
 
   virtual void checkSelfCollision(const CollisionRequest& req, CollisionResult& res,
@@ -75,11 +75,16 @@ public:
 
   virtual double distanceSelf(const robot_state::RobotState& state) const;
   virtual double distanceSelf(const robot_state::RobotState& state, const AllowedCollisionMatrix& acm) const;
+  virtual void distanceSelf(const DistanceRequest& req, DistanceResult& res,
+                            const robot_state::RobotState& state) const override;
 
   virtual double distanceOther(const robot_state::RobotState& state, const CollisionRobot& other_robot,
                                const robot_state::RobotState& other_state) const;
   virtual double distanceOther(const robot_state::RobotState& state, const CollisionRobot& other_robot,
                                const robot_state::RobotState& other_state, const AllowedCollisionMatrix& acm) const;
+  virtual void distanceOther(const DistanceRequest& req, DistanceResult& res, const robot_state::RobotState& state,
+                             const CollisionRobot& other_robot,
+                             const robot_state::RobotState& other_state) const override;
 };
 }
 

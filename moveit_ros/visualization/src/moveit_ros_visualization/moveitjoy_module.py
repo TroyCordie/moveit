@@ -37,6 +37,8 @@
 #   Author: Ryohei Ueda, Dave Coleman
 #   Desc:   Interface between PS3/XBox controller and MoveIt! Motion Planning Rviz Plugin
 
+from __future__ import print_function
+
 import xml.dom.minidom
 from operator import add
 import sys
@@ -361,7 +363,7 @@ class MoveitJoy:
                 print name, planning_groups[name]
                 del planning_groups[name]
             else:
-                print name, planning_groups[name]
+                print(name, planning_groups[name])
         self.planning_groups = planning_groups
 
         self.planning_groups_keys = planning_groups.keys()   #we'd like to store the 'order'

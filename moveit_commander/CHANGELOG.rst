@@ -2,6 +2,40 @@
 Changelog for package moveit_commander
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.10.5 (2018-11-01)
+-------------------
+
+0.10.4 (2018-10-29)
+-------------------
+
+0.10.3 (2018-10-29)
+-------------------
+
+0.10.2 (2018-10-24)
+-------------------
+* [capability] Added plan_only flags to pick and place (`#862 <https://github.com/ros-planning/moveit/issues/862>`_)
+* [maintenance] Python3 support (`#1103 <https://github.com/ros-planning/moveit/issues/1103>`_, `#1054 <https://github.com/ros-planning/moveit/issues/1054>`_)
+* Contributors: David Watkins, Michael Görner, d-walsh, mike lautman
+
+0.10.1 (2018-05-25)
+-------------------
+* Get robot markers from state (`#836 <https://github.com/ros-planning/moveit/issues/836>`_)
+* Add namespace capabilities to moveit_commander (`#835 <https://github.com/ros-planning/moveit/issues/835>`_)
+* Constrained Cartesian planning using moveit commander (`#805 <https://github.com/ros-planning/moveit/issues/805>`_)
+* Handle robot_description parameter in RobotCommander (`#782 <https://github.com/ros-planning/moveit/issues/782>`_)
+* support TrajectoryConstraints in MoveGroupInterface + MoveitCommander (`#793 <https://github.com/ros-planning/moveit/issues/793>`_)
+* API to get planner_id (`#788 <https://github.com/ros-planning/moveit/issues/788>`_)
+* Contributors: Akiyoshi Ochiai, Bence Magyar, Bryce Willey, Dave Coleman, Michael Görner, Ryan Keating, Will Baker
+
+0.9.11 (2017-12-25)
+-------------------
+
+0.9.10 (2017-12-09)
+-------------------
+* [fix] Bugs in moveit_commander/robot.py (`#621 <https://github.com/ros-planning/moveit/issues/621>`_)
+* [fix] pyassimp regression workaround  (`#581 <https://github.com/ros-planning/moveit/issues/581>`_)
+* Contributors: Kei Okada, Konstantin Selyunin
+
 0.9.9 (2017-08-06)
 ------------------
 

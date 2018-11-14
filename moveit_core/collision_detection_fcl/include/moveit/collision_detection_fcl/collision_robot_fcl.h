@@ -46,7 +46,7 @@ class CollisionRobotFCL : public CollisionRobot
   friend class CollisionWorldFCL;
 
 public:
-  CollisionRobotFCL(const robot_model::RobotModelConstPtr& kmodel, double padding = 0.0, double scale = 1.0);
+  CollisionRobotFCL(const robot_model::RobotModelConstPtr& robot_model, double padding = 0.0, double scale = 1.0);
 
   CollisionRobotFCL(const CollisionRobotFCL& other);
 
@@ -76,12 +76,12 @@ public:
                                    const robot_state::RobotState& other_state2,
                                    const AllowedCollisionMatrix& acm) const;
 
-  virtual double distanceSelf(const robot_state::RobotState& state) const;
-  virtual double distanceSelf(const robot_state::RobotState& state, const AllowedCollisionMatrix& acm) const;
-  virtual double distanceOther(const robot_state::RobotState& state, const CollisionRobot& other_robot,
-                               const robot_state::RobotState& other_state) const;
-  virtual double distanceOther(const robot_state::RobotState& state, const CollisionRobot& other_robot,
-                               const robot_state::RobotState& other_state, const AllowedCollisionMatrix& acm) const;
+  virtual void distanceSelf(const DistanceRequest& req, DistanceResult& res,
+                            const robot_state::RobotState& state) const override;
+
+  virtual void distanceOther(const DistanceRequest& req, DistanceResult& res, const robot_state::RobotState& state,
+                             const CollisionRobot& other_robot,
+                             const robot_state::RobotState& other_state) const override;
 
 protected:
   virtual void updatedPaddingOrScaling(const std::vector<std::string>& links);
@@ -94,9 +94,6 @@ protected:
   void checkOtherCollisionHelper(const CollisionRequest& req, CollisionResult& res,
                                  const robot_state::RobotState& state, const CollisionRobot& other_robot,
                                  const robot_state::RobotState& other_state, const AllowedCollisionMatrix* acm) const;
-  double distanceSelfHelper(const robot_state::RobotState& state, const AllowedCollisionMatrix* acm) const;
-  double distanceOtherHelper(const robot_state::RobotState& state, const CollisionRobot& other_robot,
-                             const robot_state::RobotState& other_state, const AllowedCollisionMatrix* acm) const;
 
   std::vector<FCLGeometryConstPtr> geoms_;
   std::vector<FCLCollisionObjectConstPtr> fcl_objs_;

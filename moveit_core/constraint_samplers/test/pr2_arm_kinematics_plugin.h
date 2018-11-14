@@ -43,7 +43,6 @@
 #include <kdl_parser/kdl_parser.hpp>
 
 #include <angles/angles.h>
-#include <tf_conversions/tf_kdl.h>
 
 #include <moveit/macros/class_forward.h>
 #include <moveit_msgs/GetPositionFK.h>
@@ -87,6 +86,8 @@ public:
 
   ~PR2ArmIKSolver(){};
 
+  virtual void updateInternalDataStructures();
+
   /**
    * @brief The PR2 inverse kinematics solver
    */
@@ -99,7 +100,7 @@ public:
 
   int CartToJnt(const KDL::JntArray& q_init, const KDL::Frame& p_in, KDL::JntArray& q_out);
 
-  int CartToJntSearch(const KDL::JntArray& q_in, const KDL::Frame& p_in, KDL::JntArray& q_out, const double& timeout);
+  int cartToJntSearch(const KDL::JntArray& q_in, const KDL::Frame& p_in, KDL::JntArray& q_out, const double& timeout);
 
   void getSolverInfo(moveit_msgs::KinematicSolverInfo& response)
   {

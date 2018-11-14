@@ -19,9 +19,18 @@ find_package(catkin REQUIRED COMPONENTS
   message_filters
   srdfdom
   urdf
+<<<<<<< HEAD
   tf
   tf_conversions
   eigen_conversions
+=======
+  tf2
+  tf2_geometry_msgs
+  tf2_eigen
+  tf2_msgs
+  tf2_ros
+  chomp_motion_planner
+>>>>>>> upstream/melodic-devel
 )
 
 find_package(Eigen3 REQUIRED)

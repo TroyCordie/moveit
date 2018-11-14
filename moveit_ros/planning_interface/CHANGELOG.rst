@@ -2,6 +2,47 @@
 Changelog for package moveit_ros_planning_interface
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.10.5 (2018-11-01)
+-------------------
+
+0.10.4 (2018-10-29)
+-------------------
+
+0.10.3 (2018-10-29)
+-------------------
+* [capability] Get available planning group names from MoveGroup C++ (`#1159 <https://github.com/ros-planning/moveit/issues/1159>`_)
+* Contributors: Dave Coleman
+
+0.10.2 (2018-10-24)
+-------------------
+* [capability] Added plan_only flags to pick and place (`#862 <https://github.com/ros-planning/moveit/issues/862>`_)
+* [maintenance] Python3 support (`#1103 <https://github.com/ros-planning/moveit/issues/1103>`_, `#1054 <https://github.com/ros-planning/moveit/issues/1054>`_)
+* [fix] optional namespace args (`#929 <https://github.com/ros-planning/moveit/issues/929>`_)
+* Contributors: David Watkins, Michael Görner, Mohmmad Ayman, Robert Haschke, mike lautman
+
+0.10.1 (2018-05-25)
+-------------------
+* [maintenance] Remove deprecated ExecuteTrajectoryServiceCapability (`#833 <https://github.com/ros-planning/moveit/issues/833>`_)
+* [maintenance] migration from tf to tf2 API (`#830 <https://github.com/ros-planning/moveit/issues/830>`_)
+* [maintenance] switch to ROS_LOGGER from CONSOLE_BRIDGE (`#874 <https://github.com/ros-planning/moveit/issues/874>`_)
+* [capability] namespace to moveit_commander (`#835 <https://github.com/ros-planning/moveit/issues/835>`_)
+* Constrained Cartesian planning using moveit commander (`#805 <https://github.com/ros-planning/moveit/issues/805>`_)
+* Simplify adding CollisionObjects with colors (`#810 <https://github.com/ros-planning/moveit/issues/810>`_)
+* support TrajectoryConstraints in MoveGroupInterface + MoveitCommander (`#793 <https://github.com/ros-planning/moveit/issues/793>`_)
+* Add API to get planner_id (`#788 <https://github.com/ros-planning/moveit/issues/788>`_)
+* Allow wait time to be specified for getCurrentState() (`#685 <https://github.com/ros-planning/moveit/issues/685>`_)
+* Contributors: 2scholz, Akiyoshi Ochiai, Bence Magyar, Dave Coleman, Ian McMahon, Robert Haschke, Will Baker, Xiaojian Ma, srsidd
+
+0.9.11 (2017-12-25)
+-------------------
+
+0.9.10 (2017-12-09)
+-------------------
+* [fix] MoveGroupInterface: Fixed computeCartesianPath to use selected end-effector. (`#580 <https://github.com/ros-planning/moveit/issues/580>`_)
+* [capability][kinetic onward] Adapt pick pipeline to function without object (`#599 <https://github.com/ros-planning/moveit/issues/599>`_)
+* [improve] Disabled copy constructors and added a move constructor to MoveGroupInterface (`#664 <https://github.com/ros-planning/moveit/issues/664>`_)
+* Contributors: 2scholz, Dennis Hartmann, Jonathan Meyer, Simon Schmeisser
+
 0.9.9 (2017-08-06)
 ------------------
 
@@ -35,7 +76,7 @@ Changelog for package moveit_ros_planning_interface
 * Contributors: Bastian Gaspers, Dave Coleman, Isaac I.Y. Saito, Jorge Santos Simon, Michael Goerner, Robert Haschke
 
 0.9.3 (2016-11-16)
------------
+------------------
 
 0.6.6 (2016-06-08)
 ------------------
@@ -74,7 +115,7 @@ Changelog for package moveit_ros_planning_interface
 
 0.6.3 (2014-12-03)
 ------------------
-* include correct boost::*_ptr class for boost 1.57.
+* include correct ``boost::*_ptr`` class for boost 1.57.
 * Contributors: v4hn
 
 0.6.2 (2014-10-31)

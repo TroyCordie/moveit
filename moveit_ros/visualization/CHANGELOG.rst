@@ -2,6 +2,49 @@
 Changelog for package moveit_ros_visualization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.10.5 (2018-11-01)
+-------------------
+
+0.10.4 (2018-10-29)
+-------------------
+
+0.10.3 (2018-10-29)
+-------------------
+* [maintenance] Store more settings of rviz' PlanningFrame (`#1135 <https://github.com/ros-planning/moveit/issues/1135>`_)
+* [maintenance] Lint visualization (`#1144 <https://github.com/ros-planning/moveit/issues/1144>`_)
+* Contributors: Alexander Gutenkunst, Dave Coleman
+
+0.10.2 (2018-10-24)
+-------------------
+* [fix] build issue in boost/thread/mutex.hpp (`#1055 <https://github.com/ros-planning/moveit/issues/1055>`_)
+* [fix] optional namespace args (`#929 <https://github.com/ros-planning/moveit/issues/929>`_)
+* [maintenance] Python3 support (`#1103 <https://github.com/ros-planning/moveit/issues/1103>`_, `#1054 <https://github.com/ros-planning/moveit/issues/1054>`_)
+* [maintenance] add minimum required pluginlib version (`#927 <https://github.com/ros-planning/moveit/issues/927>`_)
+* Contributors: Michael Görner, Mikael Arguedas, Mohmmad Ayman, Robert Haschke, Timon Engelke, mike lautman
+
+0.10.1 (2018-05-25)
+-------------------
+* [maintenance] migration from tf to tf2 API (`#830 <https://github.com/ros-planning/moveit/issues/830>`_)
+* [feature] rviz plugin: set start/goal RobotState from external (`#823 <https://github.com/ros-planning/moveit/issues/823>`_)
+  - /rviz/moveit/update_custom_start_state
+  - /rviz/moveit/update_custom_goal_state
+  stopping from external:
+  - /rviz/moveit/stop
+* [feature] namespace capabilities for moveit_commander (`#835 <https://github.com/ros-planning/moveit/issues/835>`_)
+* [fix] consider shape transform for OcTree
+* [fix] realtime trajectory display (`#761 <https://github.com/ros-planning/moveit/issues/761>`_)
+* Contributors: Alexander Rössler, Dave Coleman, Ian McMahon, Mikael Arguedas, Pan Hy, Phy, Robert Haschke, Will Baker
+
+0.9.11 (2017-12-25)
+-------------------
+
+0.9.10 (2017-12-09)
+-------------------
+* [fix] don't crash on empty robot_description in RobotState plugin `#688 <https://github.com/ros-planning/moveit/issues/688>`_
+* [fix] RobotState rviz previewer: First message from e.g. latching publishers is not applied to robot state correctly (`#596 <https://github.com/ros-planning/moveit/issues/596>`_)
+* [doc] Document auto scale in Rviz plugin (`#602 <https://github.com/ros-planning/moveit/issues/602>`_)
+* Contributors: Dave Coleman, Isaac I.Y. Saito, Simon Schmeisser, axelschroth
+
 0.9.9 (2017-08-06)
 ------------------
 * [fix] RobotStateVisualization: clear before load to avoid segfault `#572 <https://github.com/ros-planning/moveit/pull/572>`_
@@ -119,33 +162,16 @@ Changelog for package moveit_ros_visualization
 * fixing conflicts, renaming variable
 * Merge pull request `#612 <https://github.com/ros-planning/moveit_ros/issues/612>`_ from ubi-agni/interrupt-traj-vis
   interrupt trajectory visualization on arrival of new display trajectory
-* cherry-picked PR `#611 <https://github.com/ros-planning/moveit_ros/issues/611>`_
-  fix segfault when disabling and re-enabling TrajectoryVisualization
-* cherry-picked PR `#609 <https://github.com/ros-planning/moveit_ros/issues/609>`_
-  load / save rviz' workspace config
-  fixed tab order of rviz plugin widgets
-  use move_group/default_workspace_bounds as a fallback for workspace bounds
-* fixup! cleanup TrajectoryVisualization::update
-  only enter visualization loop when displaying_trajectory_message_ is defined
+* cherry-picked PR `#611 <https://github.com/ros-planning/moveit_ros/issues/611>`_: fix segfault when disabling and re-enabling TrajectoryVisualization
+* cherry-picked PR `#609 <https://github.com/ros-planning/moveit_ros/issues/609>`_: load / save rviz' workspace config
 * added missing initialization
 * correctly setAlpha for new trail
 * fixed race condition for trajectory-display interruption
-  - TrajectoryVisualization::update() switches to new trajectory
-  automatically when it has finished displaying the old one
-  - TrajectoryVisualization::interruptCurrentDisplay() might interrupt
-  this newly started trajectory
-  consequences:
-  - protect switching of trajectory with mutex
-  - interrupt only if trajectory display progressed past first waypoint
-  - removed obsolete signal timeToShowNewTrail:
-  update() automatically switches and updates trail in sync
 * cleanup TrajectoryVisualization::update
   simplified code to switch to new trajectory / start over animation in loop mode
 * new GUI property to allow immediate interruption of displayed trajectory
 * immediately show trajectory after planning (interrupting current display)
 * fix segfault when disabling and re-enabling TrajectoryVisualization
-  animating_path_ was still true causing update() to access
-  displaying_trajectory_message_, which was reset onDisable().
 * update pose of all markers when any marker moved
   Having several end-effector markers attached to a group (e.g. a multi-
   fingered hand having an end-effector per fingertip and an end-effector

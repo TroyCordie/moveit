@@ -129,7 +129,7 @@ struct CollisionData
   }
 
   /// Compute \e active_components_only_ based on \e req_
-  void enableGroup(const robot_model::RobotModelConstPtr& kmodel);
+  void enableGroup(const robot_model::RobotModelConstPtr& robot_model);
 
   /// The collision request passed by the user
   const CollisionRequest* req_;
@@ -147,6 +147,25 @@ struct CollisionData
 
   /// Flag indicating whether collision checking is complete
   bool done_;
+};
+
+struct DistanceData
+{
+  DistanceData(const DistanceRequest* req, DistanceResult* res) : req(req), res(res), done(false)
+  {
+  }
+  ~DistanceData()
+  {
+  }
+
+  /// Distance query request information
+  const DistanceRequest* req;
+
+  /// Distance query results information
+  DistanceResult* res;
+
+  /// Indicates if distance query is finished.
+  bool done;
 };
 
 MOVEIT_CLASS_FORWARD(FCLGeometry);

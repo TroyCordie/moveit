@@ -35,7 +35,6 @@
 /* Author: Sachin Chitta, E. Gil Jones */
 
 #include <angles/angles.h>
-#include <console_bridge/console.h>
 #include "pr2_arm_ik.h"
 
 /**** List of angles (for reference) *******
@@ -67,9 +66,9 @@ bool PR2ArmIK::init(const urdf::ModelInterface& robot_model, const std::string& 
     if (!joint)
     {
       if (link->parent_joint)
-        logError("Could not find joint: %s", link->parent_joint->name.c_str());
+        ROS_ERROR_NAMED("pr2_arm_kinematics_plugin", "Could not find joint: %s", link->parent_joint->name.c_str());
       else
-        logError("Link %s has no parent joint", link->name.c_str());
+        ROS_ERROR_NAMED("pr2_arm_kinematics_plugin", "Link %s has no parent joint", link->name.c_str());
       return false;
     }
     if (joint->type != urdf::Joint::UNKNOWN && joint->type != urdf::Joint::FIXED)
@@ -77,7 +76,8 @@ bool PR2ArmIK::init(const urdf::ModelInterface& robot_model, const std::string& 
       link_offset.push_back(link->parent_joint->parent_to_joint_origin_transform);
       angle_multipliers_.push_back(joint->axis.x * fabs(joint->axis.x) + joint->axis.y * fabs(joint->axis.y) +
                                    joint->axis.z * fabs(joint->axis.z));
-      logDebug("Joint axis: %d, %f, %f, %f", 6 - num_joints, joint->axis.x, joint->axis.y, joint->axis.z);
+      ROS_DEBUG_NAMED("pr2_arm_kinematics_plugin", "Joint axis: %d, %f, %f, %f", 6 - num_joints, joint->axis.x,
+                      joint->axis.y, joint->axis.z);
       if (joint->type != urdf::Joint::CONTINUOUS)
       {
         if (joint->safety)
@@ -96,7 +96,7 @@ bool PR2ArmIK::init(const urdf::ModelInterface& robot_model, const std::string& 
           {
             min_angles_.push_back(0.0);
             max_angles_.push_back(0.0);
-            logWarn("No joint limits or joint '%s'", joint->name.c_str());
+            ROS_WARN_NAMED("pr2_arm_kinematics_plugin", "No joint limits or joint '%s'", joint->name.c_str());
           }
         }
         continuous_joint_.push_back(false);
@@ -128,7 +128,8 @@ bool PR2ArmIK::init(const urdf::ModelInterface& robot_model, const std::string& 
 
   if (num_joints != 7)
   {
-    logError("PR2ArmIK:: Chain from %s to %s does not have 7 joints", root_name.c_str(), tip_name.c_str());
+    ROS_ERROR_NAMED("pr2_arm_kinematics_plugin", "PR2ArmIK:: Chain from %s to %s does not have 7 joints",
+                    root_name.c_str(), tip_name.c_str());
     return false;
   }
 
@@ -150,7 +151,7 @@ bool PR2ArmIK::init(const urdf::ModelInterface& robot_model, const std::string& 
   return true;
 }
 
-void PR2ArmIK::addJointToChainInfo(urdf::JointConstSharedPtr joint, moveit_msgs::KinematicSolverInfo& info)
+void PR2ArmIK::addJointToChainInfo(const urdf::JointConstSharedPtr& joint, moveit_msgs::KinematicSolverInfo& info)
 {
   moveit_msgs::JointLimits limit;
   info.joint_names.push_back(joint->name);  // Joints are coming in reverse order
@@ -246,12 +247,12 @@ void PR2ArmIK::computeIKShoulderPan(const Eigen::Matrix4f& g_in, const double& t
   double denominator =
       2 * (shoulder_upperarm_offset_ - shoulder_elbow_offset_) * (shoulder_elbow_offset_ - shoulder_wrist_offset_);
 
-  double acosTerm = numerator / denominator;
+  double acos_term = numerator / denominator;
 
-  if (acosTerm > 1.0 || acosTerm < -1.0)
+  if (acos_term > 1.0 || acos_term < -1.0)
     return;
 
-  double acos_angle = acos(acosTerm);
+  double acos_angle = acos(acos_term);
 
   theta4[0] = acos_angle;
   theta4[1] = -acos_angle;
@@ -786,11 +787,5 @@ bool PR2ArmIK::checkJointLimits(const double& joint_value, const int& joint_num)
   else
     jv = angles::normalize_angle(joint_value * angle_multipliers_[joint_num]);
 
-  if (jv < min_angles_[joint_num] || jv > max_angles_[joint_num])
-  {
-    // ROS_INFO("Angle %d = %f out of range:
-    // (%f,%f)\n",joint_num,joint_value,min_angles_[joint_num],max_angles_[joint_num]);
-    return false;
-  }
-  return true;
+  return not(jv < min_angles_[joint_num] || jv > max_angles_[joint_num]);
 }

@@ -37,6 +37,7 @@
 #ifndef KDLCHAINIKSOLVERPOS_LMA_JL_MIMIC_H
 #define KDLCHAINIKSOLVERPOS_LMA_JL_MIMIC_H
 
+#include "kdl/config.h"
 #include "kdl/chainiksolverpos_lma.hpp"  // Solver for the inverse position kinematics that uses Levenberg-Marquardt.
 #include "kdl/chainfksolver.hpp"
 
@@ -76,9 +77,18 @@ public:
                                 ChainFkSolverPos& fksolver, ChainIkSolverPos_LMA& iksolver, unsigned int maxiter = 100,
                                 double eps = 1e-6, bool position_ik = false);
 
-  ~ChainIkSolverPos_LMA_JL_Mimic();
+// TODO: simplify after kinetic support is dropped
+#define KDL_VERSION_LESS(a, b, c) (KDL_VERSION < ((a << 16) | (b << 8) | c))
+#if KDL_VERSION_LESS(1, 4, 0)
+  void updateInternalDataStructures();
+#else
+  void updateInternalDataStructures() override;
+#endif
+#undef KDL_VERSION_LESS
 
-  virtual int CartToJnt(const JntArray& q_init, const Frame& p_in, JntArray& q_out);
+  ~ChainIkSolverPos_LMA_JL_Mimic() override;
+
+  int CartToJnt(const JntArray& q_init, const Frame& p_in, JntArray& q_out) override;
 
   virtual int CartToJntAdvanced(const JntArray& q_init, const Frame& p_in, JntArray& q_out, bool lock_redundant_joints);
 

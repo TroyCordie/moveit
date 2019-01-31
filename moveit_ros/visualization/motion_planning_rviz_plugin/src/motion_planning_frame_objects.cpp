@@ -47,7 +47,7 @@
 #include <rviz/frame_manager.h>
 #include <rviz/window_manager_interface.h>
 
-#include <eigen_conversions/eigen_msg.h>
+#include <tf2_eigen/tf2_eigen.h>
 #include <geometric_shapes/shape_operations.h>
 
 #include <QMessageBox>
@@ -225,7 +225,7 @@ void MotionPlanningFrame::selectedCollisionObjectChanged()
     {
       ui_->scene_scale->setEnabled(true);
       bool update_scene_marker = false;
-      Eigen::Affine3d obj_pose;
+      Eigen::Isometry3d obj_pose;
       {
         const planning_scene_monitor::LockedPlanningSceneRO& ps = planning_display_->getPlanningSceneRO();
         const collision_detection::CollisionWorld::ObjectConstPtr& obj =
@@ -305,7 +305,7 @@ void MotionPlanningFrame::updateCollisionObjectPose(bool update_marker_position)
     collision_detection::CollisionWorld::ObjectConstPtr obj = ps->getWorld()->getObject(sel[0]->text().toStdString());
     if (obj && obj->shapes_.size() == 1)
     {
-      Eigen::Affine3d p;
+      Eigen::Isometry3d p;
       p.translation()[0] = ui_->object_x->value();
       p.translation()[1] = ui_->object_y->value();
       p.translation()[2] = ui_->object_z->value();
@@ -361,7 +361,7 @@ void MotionPlanningFrame::imProcessFeedback(visualization_msgs::InteractiveMarke
   ui_->object_z->blockSignals(oldState);
 
   Eigen::Quaterniond q;
-  tf::quaternionMsgToEigen(feedback.pose.orientation, q);
+  tf2::fromMsg(feedback.pose.orientation, q);
   Eigen::Vector3d xyz = q.matrix().eulerAngles(0, 1, 2);
 
   oldState = ui_->object_rx->blockSignals(true);
@@ -667,7 +667,7 @@ void MotionPlanningFrame::computeLoadQueryButtonClicked()
 }
 
 void MotionPlanningFrame::addObject(const collision_detection::WorldPtr& world, const std::string& id,
-                                    const shapes::ShapeConstPtr& shape, const Eigen::Affine3d& pose)
+                                    const shapes::ShapeConstPtr& shape, const Eigen::Isometry3d& pose)
 {
   world->addToObject(id, shape, pose);
 
@@ -933,16 +933,17 @@ void MotionPlanningFrame::computeImportFromText(const std::string& path)
   if (ps)
   {
     std::ifstream fin(path.c_str());
-    if (fin.good())
+    if (ps->loadGeometryFromStream(fin))
     {
-      ps->loadGeometryFromStream(fin);
-      fin.close();
       ROS_INFO("Loaded scene geometry from '%s'", path.c_str());
       planning_display_->addMainLoopJob(boost::bind(&MotionPlanningFrame::populateCollisionObjectsList, this));
       planning_display_->queueRenderSceneGeometry();
     }
     else
-      ROS_WARN("Unable to load scene geometry from '%s'", path.c_str());
+    {
+      QMessageBox::warning(nullptr, "Loading scene geometry", "Failed to load scene geometry.\n"
+                                                              "See console output for more details.");
+    }
   }
 }
 

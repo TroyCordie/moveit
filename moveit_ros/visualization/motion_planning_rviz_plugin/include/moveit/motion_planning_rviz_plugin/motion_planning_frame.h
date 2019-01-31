@@ -100,8 +100,9 @@ class MotionPlanningFrame : public QWidget
   Q_OBJECT
 
 public:
+  MotionPlanningFrame(const MotionPlanningFrame&) = delete;
   MotionPlanningFrame(MotionPlanningDisplay* pdisplay, rviz::DisplayContext* context, QWidget* parent = 0);
-  ~MotionPlanningFrame();
+  ~MotionPlanningFrame() override;
 
   void changePlanningGroup();
   void enable();
@@ -150,6 +151,8 @@ private Q_SLOTS:
   void approximateIKChanged(int state);
 
   // Planning tab
+  bool computeCartesianPlan();
+  bool computeJointSpacePlan();
   void planButtonClicked();
   void executeButtonClicked();
   void planAndExecuteButtonClicked();
@@ -158,8 +161,9 @@ private Q_SLOTS:
   void allowLookingToggled(bool checked);
   void allowExternalProgramCommunication(bool enable);
   void pathConstraintsIndexChanged(int index);
-  void useStartStateButtonClicked();
-  void useGoalStateButtonClicked();
+  void startStateTextChanged(const QString& start_state);
+  void goalStateTextChanged(const QString& goal_state);
+  void planningGroupTextChanged(const QString& planning_group);
   void onClearOctomapClicked();
 
   // Scene Objects tab
@@ -228,12 +232,13 @@ private:
   void configureWorkspace();
   void updateQueryStateHelper(robot_state::RobotState& state, const std::string& v);
   void fillStateSelectionOptions();
-  void useStartStateButtonExec();
-  void useGoalStateButtonExec();
+  void fillPlanningGroupOptions();
+  void startStateTextChangedExec(const std::string& start_state);
+  void goalStateTextChangedExec(const std::string& goal_state);
 
   // Scene objects tab
   void addObject(const collision_detection::WorldPtr& world, const std::string& id, const shapes::ShapeConstPtr& shape,
-                 const Eigen::Affine3d& pose);
+                 const Eigen::Isometry3d& pose);
   void updateCollisionObjectPose(bool update_marker_position);
   void createSceneInteractiveMarker();
   void renameCollisionObject(QListWidgetItem* item);
@@ -285,8 +290,11 @@ private:
 
   ros::Subscriber plan_subscriber_;
   ros::Subscriber execute_subscriber_;
+  ros::Subscriber stop_subscriber_;
   ros::Subscriber update_start_state_subscriber_;
   ros::Subscriber update_goal_state_subscriber_;
+  ros::Subscriber update_custom_start_state_subscriber_;
+  ros::Subscriber update_custom_goal_state_subscriber_;
   // General
   void changePlanningGroupHelper();
   void importResource(const std::string& path);
@@ -294,8 +302,11 @@ private:
 
   void remotePlanCallback(const std_msgs::EmptyConstPtr& msg);
   void remoteExecuteCallback(const std_msgs::EmptyConstPtr& msg);
+  void remoteStopCallback(const std_msgs::EmptyConstPtr& msg);
   void remoteUpdateStartStateCallback(const std_msgs::EmptyConstPtr& msg);
   void remoteUpdateGoalStateCallback(const std_msgs::EmptyConstPtr& msg);
+  void remoteUpdateCustomStartStateCallback(const moveit_msgs::RobotStateConstPtr& msg);
+  void remoteUpdateCustomGoalStateCallback(const moveit_msgs::RobotStateConstPtr& msg);
 
   /* Selects or unselects a item in a list by the item name */
   void setItemSelectionInList(const std::string& item_name, bool selection, QListWidget* list);

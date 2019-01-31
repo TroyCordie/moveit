@@ -34,7 +34,7 @@
 
 /* Author: Ioan Sucan */
 
-#include <pluginlib/class_loader.h>
+#include <pluginlib/class_loader.hpp>
 #include <moveit/planning_request_adapter/planning_request_adapter.h>
 #include <ros/ros.h>
 #include <memory>
@@ -62,7 +62,7 @@ int main(int argc, char** argv)
     planning_request_adapter::PlanningRequestAdapterConstPtr ad;
     try
     {
-      ad.reset(loader->createUnmanagedInstance(classes[i]));
+      ad = loader->createUniqueInstance(classes[i]);
     }
     catch (pluginlib::PluginlibException& ex)
     {

@@ -40,7 +40,6 @@
 
 #include <moveit/macros/class_forward.h>
 #include <moveit/exceptions/exceptions.h>
-#include <console_bridge/console.h>
 #include <urdf/model.h>
 #include <srdfdom/model.h>
 
@@ -239,6 +238,19 @@ public:
   /** \brief Get a link by its name. Output error and return NULL when the link is missing. */
   LinkModel* getLinkModel(const std::string& link);
 
+  /** \brief Get the latest link upwards the kinematic tree, which is only connected via fixed joints
+   *
+   * This is useful, if the link should be warped to a specific pose using updateStateWithLinkAt().
+   * As updateStateWithLinkAt() warps only the specified link and its descendants, you might not
+   * achieve what you expect, if link is an abstract frame name. Considering the following example:
+   * root -> arm0 -> ... -> armN -> wrist -- grasp_frame
+   *                                      -- palm -> end effector ...
+   * Calling updateStateWithLinkAt(grasp_frame), will not warp the end effector, which is probably
+   * what you went for. Instead, updateStateWithLinkAt(getRigidlyConnectedParentLinkModel(grasp_frame), ...)
+   * will actually warp wrist (and all its descendants).
+   */
+  static const moveit::core::LinkModel* getRigidlyConnectedParentLinkModel(const LinkModel* link);
+
   /** \brief Get the array of links  */
   const std::vector<const LinkModel*>& getLinkModels() const
   {
@@ -424,7 +436,8 @@ public:
   void setKinematicsAllocators(const std::map<std::string, SolverAllocatorFn>& allocators);
 
 protected:
-  void computeFixedTransforms(const LinkModel* link, const Eigen::Affine3d& transform,
+  /** \brief Get the transforms between link and all its rigidly attached descendants */
+  void computeFixedTransforms(const LinkModel* link, const Eigen::Isometry3d& transform,
                               LinkTransformMap& associated_transforms);
 
   /** \brief Given two joints, find their common root */
@@ -435,10 +448,11 @@ protected:
 
   // GENERIC INFO
 
-  /** \brief The name of the model */
+  /** \brief The name of the robot */
   std::string model_name_;
 
-  /** \brief The reference frame for this model */
+  /** \brief The reference (base) frame for this model. The frame is either extracted from the SRDF as a virtual joint,
+   * or it is assumed to be the name of the root link in the URDF */
   std::string model_frame_;
 
   srdf::ModelConstSharedPtr srdf_;
@@ -562,10 +576,10 @@ protected:
   void buildGroups(const srdf::Model& srdf_model);
 
   /** \brief Compute helpful information about groups (that can be queried later) */
-  void buildGroupsInfo_Subgroups(const srdf::Model& srdf_model);
+  void buildGroupsInfoSubgroups(const srdf::Model& srdf_model);
 
   /** \brief Compute helpful information about groups (that can be queried later) */
-  void buildGroupsInfo_EndEffectors(const srdf::Model& srdf_model);
+  void buildGroupsInfoEndEffectors(const srdf::Model& srdf_model);
 
   /** \brief Given the URDF model, build up the mimic joints (mutually constrained joints) */
   void buildMimic(const urdf::ModelInterface& urdf_model);

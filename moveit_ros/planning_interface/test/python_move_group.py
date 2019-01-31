@@ -14,7 +14,7 @@ class PythonMoveGroupTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(self):
-        self.group = MoveGroupInterface(self.PLANNING_GROUP, "robot_description")
+        self.group = MoveGroupInterface(self.PLANNING_GROUP, "robot_description", rospy.get_namespace())
 
     @classmethod
     def tearDown(self):
@@ -62,6 +62,3 @@ if __name__ == '__main__':
     NODENAME = 'moveit_test_python_move_group'
     rospy.init_node(NODENAME)
     rostest.rosrun(PKGNAME, NODENAME, PythonMoveGroupTest)
-
-    # suppress cleanup segfault
-    os._exit(0)

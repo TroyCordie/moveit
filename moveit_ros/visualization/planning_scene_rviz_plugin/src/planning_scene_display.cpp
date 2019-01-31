@@ -35,6 +35,7 @@
 
 /* Author: Ioan Sucan */
 
+#include <moveit/common_planning_interface_objects/common_objects.h>
 #include <moveit/planning_scene_rviz_plugin/planning_scene_display.h>
 #include <moveit/rviz_plugin_render_tools/robot_state_visualization.h>
 #include <moveit/rviz_plugin_render_tools/octomap_render.h>
@@ -52,7 +53,7 @@
 #include <rviz/properties/enum_property.h>
 #include <rviz/display_context.h>
 #include <rviz/frame_manager.h>
-#include <tf/transform_listener.h>
+#include <tf2_ros/buffer.h>
 
 #include <OgreSceneManager.h>
 #include <OgreSceneNode.h>
@@ -326,29 +327,25 @@ void PlanningSceneDisplay::changedSceneName()
 
 void PlanningSceneDisplay::renderPlanningScene()
 {
-  if (planning_scene_render_ && planning_scene_needs_render_)
-  {
-    QColor color = scene_color_property_->getColor();
-    rviz::Color env_color(color.redF(), color.greenF(), color.blueF());
-    if (attached_body_color_property_)
-      color = attached_body_color_property_->getColor();
-    rviz::Color attached_color(color.redF(), color.greenF(), color.blueF());
+  QColor color = scene_color_property_->getColor();
+  rviz::Color env_color(color.redF(), color.greenF(), color.blueF());
+  if (attached_body_color_property_)
+    color = attached_body_color_property_->getColor();
+  rviz::Color attached_color(color.redF(), color.greenF(), color.blueF());
 
-    try
-    {
-      const planning_scene_monitor::LockedPlanningSceneRO& ps = getPlanningSceneRO();
-      planning_scene_render_->renderPlanningScene(
-          ps, env_color, attached_color, static_cast<OctreeVoxelRenderMode>(octree_render_property_->getOptionInt()),
-          static_cast<OctreeVoxelColorMode>(octree_coloring_property_->getOptionInt()),
-          scene_alpha_property_->getFloat());
-    }
-    catch (std::exception& ex)
-    {
-      ROS_ERROR("Caught %s while rendering planning scene", ex.what());
-    }
-    planning_scene_needs_render_ = false;
-    planning_scene_render_->getGeometryNode()->setVisible(scene_enabled_property_->getBool());
+  try
+  {
+    const planning_scene_monitor::LockedPlanningSceneRO& ps = getPlanningSceneRO();
+    planning_scene_render_->renderPlanningScene(
+        ps, env_color, attached_color, static_cast<OctreeVoxelRenderMode>(octree_render_property_->getOptionInt()),
+        static_cast<OctreeVoxelColorMode>(octree_coloring_property_->getOptionInt()),
+        scene_alpha_property_->getFloat());
   }
+  catch (std::exception& ex)
+  {
+    ROS_ERROR("Caught %s while rendering planning scene", ex.what());
+  }
+  planning_scene_render_->getGeometryNode()->setVisible(scene_enabled_property_->getBool());
 }
 
 void PlanningSceneDisplay::changedSceneAlpha()
@@ -395,6 +392,7 @@ void PlanningSceneDisplay::changedSceneRobotVisualEnabled()
   {
     planning_scene_robot_->setVisible(true);
     planning_scene_robot_->setVisualVisible(scene_robot_visual_enabled_property_->getBool());
+    planning_scene_needs_render_ = true;
   }
 }
 
@@ -404,6 +402,7 @@ void PlanningSceneDisplay::changedSceneRobotCollisionEnabled()
   {
     planning_scene_robot_->setVisible(true);
     planning_scene_robot_->setCollisionVisible(scene_robot_collision_enabled_property_->getBool());
+    planning_scene_needs_render_ = true;
   }
 }
 
@@ -486,9 +485,13 @@ void PlanningSceneDisplay::unsetLinkColor(rviz::Robot* robot, const std::string&
 // ******************************************************************************************
 planning_scene_monitor::PlanningSceneMonitorPtr PlanningSceneDisplay::createPlanningSceneMonitor()
 {
+#ifdef RVIZ_TF1
+  std::shared_ptr<tf2_ros::Buffer> tf_buffer = moveit::planning_interface::getSharedTF();
+#else
+  std::shared_ptr<tf2_ros::Buffer> tf_buffer = context_->getFrameManager()->getTF2BufferPtr();
+#endif
   return planning_scene_monitor::PlanningSceneMonitorPtr(new planning_scene_monitor::PlanningSceneMonitor(
-      robot_description_property_->getStdString(), context_->getFrameManager()->getTFClientPtr(),
-      getNameStd() + "_planning_scene_monitor"));
+      robot_description_property_->getStdString(), tf_buffer, getNameStd() + "_planning_scene_monitor"));
 }
 
 void PlanningSceneDisplay::clearRobotModel()
@@ -584,6 +587,7 @@ void PlanningSceneDisplay::onEnable()
     planning_scene_render_->getGeometryNode()->setVisible(scene_enabled_property_->getBool());
 
   calculateOffsetPosition();
+  planning_scene_needs_render_ = true;
 }
 
 // ******************************************************************************************
@@ -620,11 +624,13 @@ void PlanningSceneDisplay::update(float wall_dt, float ros_dt)
 void PlanningSceneDisplay::updateInternal(float wall_dt, float ros_dt)
 {
   current_scene_time_ += wall_dt;
-  if (current_scene_time_ > scene_display_time_property_->getFloat())
+  if (current_scene_time_ > scene_display_time_property_->getFloat() && planning_scene_render_ &&
+      planning_scene_needs_render_)
   {
     renderPlanningScene();
     calculateOffsetPosition();
     current_scene_time_ = 0.0f;
+    planning_scene_needs_render_ = false;
   }
 }
 

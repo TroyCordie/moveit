@@ -6,6 +6,8 @@
  */
 
 #include <chomp_interface/chomp_planning_context.h>
+#include <moveit/trajectory_processing/iterative_time_parameterization.h>
+#include <moveit/robot_state/conversions.h>
 
 namespace chomp_interface
 {
@@ -14,17 +16,6 @@ CHOMPPlanningContext::CHOMPPlanningContext(const std::string& name, const std::s
   : planning_interface::PlanningContext(name, group), robot_model_(model)
 {
   chomp_interface_ = CHOMPInterfacePtr(new CHOMPInterface());
-
-  collision_detection::CollisionDetectorAllocatorPtr hybrid_cd(
-      collision_detection::CollisionDetectorAllocatorHybrid::create());
-
-  if (!this->getPlanningScene())
-  {
-    ROS_INFO_STREAM("Configuring New Planning Scene.");
-    planning_scene::PlanningScenePtr planning_scene_ptr(new planning_scene::PlanningScene(model));
-    planning_scene_ptr->setActiveCollisionDetector(hybrid_cd, true);
-    setPlanningScene(planning_scene_ptr);
-  }
 }
 
 CHOMPPlanningContext::~CHOMPPlanningContext()
@@ -63,13 +54,17 @@ bool CHOMPPlanningContext::solve(planning_interface::MotionPlanDetailedResponse&
 bool CHOMPPlanningContext::solve(planning_interface::MotionPlanResponse& res)
 {
   planning_interface::MotionPlanDetailedResponse res_detailed;
-  bool result = solve(res_detailed);
+  bool planning_success = solve(res_detailed);
 
   res.error_code_ = res_detailed.error_code_;
-  res.trajectory_ = res_detailed.trajectory_[0];
-  res.planning_time_ = res_detailed.processing_time_[0];
 
-  return result;
+  if (planning_success)
+  {
+    res.trajectory_ = res_detailed.trajectory_[0];
+    res.planning_time_ = res_detailed.processing_time_[0];
+  }
+
+  return planning_success;
 }
 
 bool CHOMPPlanningContext::terminate()

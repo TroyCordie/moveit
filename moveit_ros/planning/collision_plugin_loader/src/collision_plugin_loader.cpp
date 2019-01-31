@@ -33,7 +33,7 @@
  *********************************************************************/
 
 #include <moveit/collision_plugin_loader/collision_plugin_loader.h>
-#include <pluginlib/class_loader.h>
+#include <pluginlib/class_loader.hpp>
 #include <memory>
 
 namespace collision_detection
@@ -58,7 +58,7 @@ public:
     CollisionPluginPtr plugin;
     try
     {
-      plugin.reset(loader_->createUnmanagedInstance(name));
+      plugin = loader_->createUniqueInstance(name);
       plugins_[name] = plugin;
     }
     catch (pluginlib::PluginlibException& ex)

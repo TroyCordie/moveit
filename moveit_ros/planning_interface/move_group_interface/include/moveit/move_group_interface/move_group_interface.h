@@ -48,9 +48,11 @@
 #include <moveit_msgs/Grasp.h>
 #include <moveit_msgs/PlaceLocation.h>
 #include <moveit_msgs/MotionPlanRequest.h>
+#include <moveit_msgs/MoveGroupAction.h>
 #include <geometry_msgs/PoseStamped.h>
-#include <boost/shared_ptr.hpp>
-#include <tf/tf.h>
+#include <actionlib/client/simple_action_client.h>
+#include <memory>
+#include <tf2_ros/buffer.h>
 
 namespace moveit
 {
@@ -141,25 +143,27 @@ public:
       \param opt. A MoveGroupInterface::Options structure, if you pass a ros::NodeHandle with a specific callback queue,
      it has to be of type ros::CallbackQueue
         (which is the default type of callback queues used in ROS)
-      \param tf. Specify a TF instance to use. If not specified, one will be constructed internally.
+      \param tf_buffer. Specify a TF2_ROS Buffer instance to use. If not specified,
+                        one will be constructed internally along with an internal TF2_ROS TransformListener
       \param wait_for_servers. Timeout for connecting to action servers. Zero time means unlimited waiting.
     */
   MoveGroupInterface(const Options& opt,
-                     const boost::shared_ptr<tf::Transformer>& tf = boost::shared_ptr<tf::Transformer>(),
+                     const std::shared_ptr<tf2_ros::Buffer>& tf_buffer = std::shared_ptr<tf2_ros::Buffer>(),
                      const ros::WallDuration& wait_for_servers = ros::WallDuration());
-  MOVEIT_DEPRECATED MoveGroupInterface(const Options& opt, const boost::shared_ptr<tf::Transformer>& tf,
+  MOVEIT_DEPRECATED MoveGroupInterface(const Options& opt, const std::shared_ptr<tf2_ros::Buffer>& tf_buffer,
                                        const ros::Duration& wait_for_servers);
 
   /**
       \brief Construct a client for the MoveGroup action for a particular \e group.
 
-      \param tf. Specify a TF instance to use. If not specified, one will be constructed internally.
+      \param tf_buffer. Specify a TF2_ROS Buffer instance to use. If not specified,
+                        one will be constructed internally along with an internal TF2_ROS TransformListener
       \param wait_for_servers. Timeout for connecting to action servers. Zero time means unlimited waiting.
     */
   MoveGroupInterface(const std::string& group,
-                     const boost::shared_ptr<tf::Transformer>& tf = boost::shared_ptr<tf::Transformer>(),
+                     const std::shared_ptr<tf2_ros::Buffer>& tf_buffer = std::shared_ptr<tf2_ros::Buffer>(),
                      const ros::WallDuration& wait_for_servers = ros::WallDuration());
-  MOVEIT_DEPRECATED MoveGroupInterface(const std::string& group, const boost::shared_ptr<tf::Transformer>& tf,
+  MOVEIT_DEPRECATED MoveGroupInterface(const std::string& group, const std::shared_ptr<tf2_ros::Buffer>& tf_buffer,
                                        const ros::Duration& wait_for_servers);
 
   ~MoveGroupInterface();
@@ -190,6 +194,9 @@ public:
 
   /** \brief Get the name of the frame in which the robot is planning */
   const std::string& getPlanningFrame() const;
+
+  /** \brief Get the available planning group names */
+  const std::vector<std::string>& getJointModelGroupNames() const;
 
   /** \brief Get vector of names of joints available in move group */
   const std::vector<std::string>& getJointNames();
@@ -225,6 +232,9 @@ public:
 
   /** \brief Specify a planner to be used for further planning */
   void setPlannerId(const std::string& planner_id);
+
+  /** \brief Get the current planner_id */
+  const std::string& getPlannerId() const;
 
   /** \brief Specify the maximum amount of time to use when planning */
   void setPlanningTime(double seconds);
@@ -436,7 +446,7 @@ public:
 
       If IK fails to find a solution then false is returned BUT THE PARTIAL
       RESULT OF IK IS STILL SET AS THE GOAL. */
-  bool setJointValueTarget(const Eigen::Affine3d& eef_pose, const std::string& end_effector_link = "");
+  bool setJointValueTarget(const Eigen::Isometry3d& eef_pose, const std::string& end_effector_link = "");
 
   /** \brief Set the joint state goal for a particular joint by computing IK.
 
@@ -473,7 +483,7 @@ public:
       previously set Position, Orientation, or Pose targets.
 
       If IK fails to find a solution then an approximation is used. */
-  bool setApproximateJointValueTarget(const Eigen::Affine3d& eef_pose, const std::string& end_effector_link = "");
+  bool setApproximateJointValueTarget(const Eigen::Isometry3d& eef_pose, const std::string& end_effector_link = "");
 
   /** \brief Set the joint state goal to a random joint configuration
 
@@ -537,7 +547,7 @@ public:
       This new pose target replaces any pre-existing JointValueTarget or
       pre-existing Position, Orientation, or Pose target for this \e
       end_effector_link. */
-  bool setPoseTarget(const Eigen::Affine3d& end_effector_pose, const std::string& end_effector_link = "");
+  bool setPoseTarget(const Eigen::Isometry3d& end_effector_pose, const std::string& end_effector_link = "");
 
   /** \brief Set the goal pose of the end-effector \e end_effector_link.
 
@@ -575,7 +585,7 @@ public:
       This new orientation target replaces any pre-existing JointValueTarget or
       pre-existing Position, Orientation, or Pose target(s) for this \e
       end_effector_link. */
-  bool setPoseTargets(const EigenSTL::vector_Affine3d& end_effector_pose, const std::string& end_effector_link = "");
+  bool setPoseTargets(const EigenSTL::vector_Isometry3d& end_effector_pose, const std::string& end_effector_link = "");
 
   /** \brief Set goal poses for \e end_effector_link.
 
@@ -680,6 +690,11 @@ public:
       This call is not blocking (does not wait for the execution of the trajectory to complete). */
   MoveItErrorCode asyncMove();
 
+  /** \brief Get the move_group action client used by the \e MoveGroupInterface.
+      The client can be used for querying the execution state of the trajectory and abort trajectory execution
+      during asynchronous execution. */
+  actionlib::SimpleActionClient<moveit_msgs::MoveGroupAction>& getMoveGroupClient() const;
+
   /** \brief Plan and execute a trajectory that takes the group of joints declared in the constructor to the specified
      target.
       This call is always blocking (waits for the execution of the trajectory to complete) and requires an asynchronous
@@ -751,37 +766,40 @@ public:
   /** \brief Pick up an object
 
       This applies a number of hard-coded default grasps */
-  MoveItErrorCode pick(const std::string& object);
+  MoveItErrorCode pick(const std::string& object, bool plan_only = false);
 
   /** \brief Pick up an object given a grasp pose */
-  MoveItErrorCode pick(const std::string& object, const moveit_msgs::Grasp& grasp);
+  MoveItErrorCode pick(const std::string& object, const moveit_msgs::Grasp& grasp, bool plan_only = false);
 
   /** \brief Pick up an object given possible grasp poses
 
       if the vector is left empty this behaves like pick(const std::string &object) */
-  MoveItErrorCode pick(const std::string& object, const std::vector<moveit_msgs::Grasp>& grasps);
+  MoveItErrorCode pick(const std::string& object, const std::vector<moveit_msgs::Grasp>& grasps,
+                       bool plan_only = false);
 
   /** \brief Pick up an object
 
       calls the external moveit_msgs::GraspPlanning service "plan_grasps" to compute possible grasps */
-  MoveItErrorCode planGraspsAndPick(const std::string& object = "");
+  MoveItErrorCode planGraspsAndPick(const std::string& object = "", bool plan_only = false);
 
   /** \brief Pick up an object
 
       calls the external moveit_msgs::GraspPlanning service "plan_grasps" to compute possible grasps */
-  MoveItErrorCode planGraspsAndPick(const moveit_msgs::CollisionObject& object);
+  MoveItErrorCode planGraspsAndPick(const moveit_msgs::CollisionObject& object, bool plan_only = false);
 
   /** \brief Place an object somewhere safe in the world (a safe location will be detected) */
-  MoveItErrorCode place(const std::string& object);
+  MoveItErrorCode place(const std::string& object, bool plan_only = false);
 
   /** \brief Place an object at one of the specified possible locations */
-  MoveItErrorCode place(const std::string& object, const std::vector<moveit_msgs::PlaceLocation>& locations);
+  MoveItErrorCode place(const std::string& object, const std::vector<moveit_msgs::PlaceLocation>& locations,
+                        bool plan_only = false);
 
   /** \brief Place an object at one of the specified possible locations */
-  MoveItErrorCode place(const std::string& object, const std::vector<geometry_msgs::PoseStamped>& poses);
+  MoveItErrorCode place(const std::string& object, const std::vector<geometry_msgs::PoseStamped>& poses,
+                        bool plan_only = false);
 
   /** \brief Place an object at one of the specified possible location */
-  MoveItErrorCode place(const std::string& object, const geometry_msgs::PoseStamped& pose);
+  MoveItErrorCode place(const std::string& object, const geometry_msgs::PoseStamped& pose, bool plan_only = false);
 
   /** \brief Given the name of an object in the planning scene, make
       the object attached to a link of the robot.  If no link name is
@@ -825,8 +843,8 @@ public:
   /** \brief Get the current joint values for the joints planned for by this instance (see getJoints()) */
   std::vector<double> getCurrentJointValues();
 
-  /** \brief Get the current state of the robot */
-  robot_state::RobotStatePtr getCurrentState();
+  /** \brief Get the current state of the robot within the duration specified by wait. */
+  robot_state::RobotStatePtr getCurrentState(double wait = 1);
 
   /** \brief Get the pose for the end-effector \e end_effector_link.
       If \e end_effector_link is empty (the default value) then the end-effector reported by getEndEffectorLink() is
@@ -905,6 +923,10 @@ public:
   /** \brief Specify that no path constraints are to be used.
       This removes any path constraints set in previous calls to setPathConstraints(). */
   void clearPathConstraints();
+
+  moveit_msgs::TrajectoryConstraints getTrajectoryConstraints() const;
+  void setTrajectoryConstraints(const moveit_msgs::TrajectoryConstraints& constraint);
+  void clearTrajectoryConstraints();
 
   /**@}*/
 

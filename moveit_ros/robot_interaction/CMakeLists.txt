@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8.12)
 project(moveit_ros_robot_interaction)
 
-add_compile_options(-std=c++11)
+add_compile_options(-std=c++14)
 
 if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
@@ -11,9 +11,10 @@ find_package(Boost REQUIRED thread)
 find_package(catkin REQUIRED COMPONENTS
   moveit_ros_planning
   interactive_markers
-  eigen_conversions
-  tf_conversions
-  tf
+  tf2
+  tf2_eigen
+  tf2_geometry_msgs
+  tf2_ros
   roscpp
 )
 

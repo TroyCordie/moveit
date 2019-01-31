@@ -69,7 +69,7 @@ class ActionBasedControllerHandle : public ActionBasedControllerHandleBase
 {
 public:
   ActionBasedControllerHandle(const std::string& name, const std::string& ns)
-    : ActionBasedControllerHandleBase(name), namespace_(ns), done_(true), nh_("~")
+    : ActionBasedControllerHandleBase(name), nh_("~"), done_(true), namespace_(ns)
   {
     controller_action_client_.reset(new actionlib::SimpleActionClient<T>(getActionName(), true));
     unsigned int attempts = 0;
@@ -80,7 +80,7 @@ public:
     {
       while (ros::ok() && !controller_action_client_->waitForServer(ros::Duration(5.0)))
       {
-        ROS_WARN_STREAM_NAMED("moveit_simple_controller_manager", "Waiting for " << getActionName() << " to come up");
+        ROS_WARN_STREAM_NAMED("ActionBasedController", "Waiting for " << getActionName() << " to come up");
         ros::Duration(1).sleep();
       }
     }
@@ -88,13 +88,13 @@ public:
     {
       while (ros::ok() && !controller_action_client_->waitForServer(ros::Duration(timeout / 3)) && ++attempts < 3)
       {
-        ROS_WARN_STREAM_NAMED("moveit_simple_controller_manager", "Waiting for " << getActionName() << " to come up");
+        ROS_WARN_STREAM_NAMED("ActionBasedController", "Waiting for " << getActionName() << " to come up");
         ros::Duration(1).sleep();
       }
     }
     if (!controller_action_client_->isServerConnected())
     {
-      ROS_ERROR_STREAM_NAMED("moveit_simple_controller_manager", "Action client not connected: " << getActionName());
+      ROS_ERROR_STREAM_NAMED("ActionBasedController", "Action client not connected: " << getActionName());
       controller_action_client_.reset();
     }
 
@@ -106,13 +106,13 @@ public:
     return static_cast<bool>(controller_action_client_);
   }
 
-  virtual bool cancelExecution()
+  bool cancelExecution() override
   {
     if (!controller_action_client_)
       return false;
     if (!done_)
     {
-      ROS_INFO_STREAM_NAMED("moveit_simple_controller_manager", "Cancelling execution for " << name_);
+      ROS_INFO_STREAM_NAMED("ActionBasedController", "Cancelling execution for " << name_);
       controller_action_client_->cancelGoal();
       last_exec_ = moveit_controller_manager::ExecutionStatus::PREEMPTED;
       done_ = true;
@@ -120,24 +120,24 @@ public:
     return true;
   }
 
-  virtual bool waitForExecution(const ros::Duration& timeout = ros::Duration(0))
+  bool waitForExecution(const ros::Duration& timeout = ros::Duration(0)) override
   {
     if (controller_action_client_ && !done_)
       return controller_action_client_->waitForResult(timeout);
     return true;
   }
 
-  virtual moveit_controller_manager::ExecutionStatus getLastExecutionStatus()
+  moveit_controller_manager::ExecutionStatus getLastExecutionStatus() override
   {
     return last_exec_;
   }
 
-  virtual void addJoint(const std::string& name)
+  void addJoint(const std::string& name) override
   {
     joints_.push_back(name);
   }
 
-  virtual void getJoints(std::vector<std::string>& joints)
+  void getJoints(std::vector<std::string>& joints) override
   {
     joints = joints_;
   }
@@ -154,9 +154,8 @@ protected:
 
   void finishControllerExecution(const actionlib::SimpleClientGoalState& state)
   {
-    ROS_DEBUG_STREAM_NAMED("moveit_simple_controller_manager", "Controller " << name_ << " is done with state "
-                                                                             << state.toString() << ": "
-                                                                             << state.getText());
+    ROS_DEBUG_STREAM_NAMED("ActionBasedController", "Controller " << name_ << " is done with state " << state.toString()
+                                                                  << ": " << state.getText());
     if (state == actionlib::SimpleClientGoalState::SUCCEEDED)
       last_exec_ = moveit_controller_manager::ExecutionStatus::SUCCEEDED;
     else if (state == actionlib::SimpleClientGoalState::ABORTED)

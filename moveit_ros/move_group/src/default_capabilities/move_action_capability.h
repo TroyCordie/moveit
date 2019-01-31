@@ -49,7 +49,7 @@ class MoveGroupMoveAction : public MoveGroupCapability
 public:
   MoveGroupMoveAction();
 
-  virtual void initialize();
+  void initialize() override;
 
 private:
   void executeMoveCallback(const moveit_msgs::MoveGroupGoalConstPtr& goal);
@@ -68,6 +68,7 @@ private:
   moveit_msgs::MoveGroupFeedback move_feedback_;
 
   MoveGroupState move_state_;
+  bool preempt_requested_;
 };
 }
 

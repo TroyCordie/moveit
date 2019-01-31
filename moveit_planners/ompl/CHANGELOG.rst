@@ -2,6 +2,55 @@
 Changelog for package moveit_planners_ompl
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.10.8 (2018-12-24)
+-------------------
+
+0.10.7 (2018-12-13)
+-------------------
+
+0.10.6 (2018-12-09)
+-------------------
+* [fix] Fixed memory leak in OMPL planner (`#1104 <https://github.com/ros-planning/moveit/issues/1104>`_)
+  * Resolve circular reference to ompl::geometric::SimpleSetupPtr
+* [maintenance] Use C++14 (`#1146 <https://github.com/ros-planning/moveit/issues/1146>`_)
+* [maintenance] Code Cleanup
+  * `#1179 <https://github.com/ros-planning/moveit/issues/1179>`_
+  * `#1196 <https://github.com/ros-planning/moveit/issues/1196>`_
+* Contributors: Alex Moriarty, Dave Coleman, Robert Haschke
+
+0.10.5 (2018-11-01)
+-------------------
+* [fix] Build regression (`#1174 <https://github.com/ros-planning/moveit/issues/1174>`_)
+* Contributors: Chris Lalancette
+
+0.10.4 (2018-10-29)
+-------------------
+
+0.10.3 (2018-10-29)
+-------------------
+* [maintenance] Use locale independent conversion from double to string (`#1099 <https://github.com/ros-planning/moveit/issues/1099>`_)
+* Contributors: Simon Schmeisser
+
+0.10.2 (2018-10-24)
+-------------------
+* [capability] adaptions for OMPL 1.4 (`#903 <https://github.com/ros-planning/moveit/issues/903>`_)
+* Contributors: Dave Coleman, Michael Görner, Mikael Arguedas, Mohmmad Ayman, Robert Haschke, mike lautman
+
+0.10.1 (2018-05-25)
+-------------------
+* migration from tf to tf2 API (`#830 <https://github.com/ros-planning/moveit/issues/830>`_)
+* switch to ROS_LOGGER from CONSOLE_BRIDGE (`#874 <https://github.com/ros-planning/moveit/issues/874>`_)
+* Make trajectory interpolation in MoveIt consistent to OMPL (`#869 <https://github.com/ros-planning/moveit/issues/869>`_)
+* Contributors: Bryce Willey, Ian McMahon, Mikael Arguedas, Robert Haschke, Xiaojian Ma
+
+0.9.11 (2017-12-25)
+-------------------
+
+0.9.10 (2017-12-09)
+-------------------
+* [maintenance][kinetic onward] Remove OutputHandlerROS from ompl_interface (`#609 <https://github.com/ros-planning/moveit/issues/609>`_)
+* Contributors: Bence Magyar
+
 0.9.9 (2017-08-06)
 ------------------
 * [improve][moveit_planners_ompl] Optional forced use of JointModelStateSpaceFactory (`#541 <https://github.com/ros-planning/moveit/issues/541>`_)
@@ -54,7 +103,7 @@ Changelog for package moveit_planners_ompl
 ------------------
 * Changed OMPL SimpleSetup member variable to shared pointer, passed MotionPlanningRequest to child function
 * Simplified number of solve() entry points in moveit_planners_ompl
-* Fixed uninitialized ptc_ pointer causing a crash.
+* Fixed uninitialized ``ptc_`` pointer causing a crash.
 * renamed newGoal to new_goal for keeping with formatting
 * setting GroupStateValidityCallbackFn member for constraint_sampler member and implementing callbacks for state validity checking
 * added functions to check validit of state, and also to act as callback for constraint sampler

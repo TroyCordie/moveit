@@ -85,6 +85,8 @@ MOVEIT_CLASS_FORWARD(ManipulationPlan);
 
 struct ManipulationPlan
 {
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
   ManipulationPlan(const ManipulationPlanSharedDataConstPtr& shared_data)
     : shared_data_(shared_data), processing_stage_(0)
   {
@@ -117,7 +119,7 @@ struct ManipulationPlan
 
   // -------------- computed data --------------------------
   geometry_msgs::PoseStamped goal_pose_;
-  Eigen::Affine3d transformed_goal_pose_;
+  Eigen::Isometry3d transformed_goal_pose_;
 
   moveit_msgs::Constraints goal_constraints_;
 

@@ -51,7 +51,7 @@
 #include <boost/progress.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 
-#include <eigen_conversions/eigen_msg.h>
+#include <tf2_eigen/tf2_eigen.h>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
@@ -373,17 +373,17 @@ void moveit_benchmarks::BenchmarkExecution::runAllBenchmarks(BenchmarkType type)
             geometry_msgs::Pose wMc_msg;
             wMc_msg.position = constr->position_constraints[0].constraint_region.primitive_poses[0].position;
             wMc_msg.orientation = constr->orientation_constraints[0].orientation;
-            Eigen::Affine3d wMc;
-            tf::poseMsgToEigen(wMc_msg, wMc);
+            Eigen::Isometry3d wMc;
+            tf2::fromMsg(wMc_msg, wMc);
 
-            Eigen::Affine3d offset_tf(Eigen::AngleAxis<double>(options_.offsets[3], Eigen::Vector3d::UnitX()) *
-                                      Eigen::AngleAxis<double>(options_.offsets[4], Eigen::Vector3d::UnitY()) *
-                                      Eigen::AngleAxis<double>(options_.offsets[5], Eigen::Vector3d::UnitZ()));
+            Eigen::Isometry3d offset_tf(Eigen::AngleAxis<double>(options_.offsets[3], Eigen::Vector3d::UnitX()) *
+                                        Eigen::AngleAxis<double>(options_.offsets[4], Eigen::Vector3d::UnitY()) *
+                                        Eigen::AngleAxis<double>(options_.offsets[5], Eigen::Vector3d::UnitZ()));
             offset_tf.translation() = Eigen::Vector3d(options_.offsets[0], options_.offsets[1], options_.offsets[2]);
 
-            Eigen::Affine3d wMnc = wMc * offset_tf;
+            Eigen::Isometry3d wMnc = wMc * offset_tf;
             geometry_msgs::Pose wMnc_msg;
-            tf::poseEigenToMsg(wMnc, wMnc_msg);
+            wMnc_msg = tf2::toMsg(wMnc);
 
             req.motion_plan_request.goal_constraints[0]
                 .position_constraints[0]
@@ -442,9 +442,9 @@ void moveit_benchmarks::BenchmarkExecution::runAllBenchmarks(BenchmarkType type)
           // set the workspace bounds
           req.motion_plan_request.workspace_parameters = options_.workspace_parameters;
 
-          Eigen::Affine3d offset_tf(Eigen::AngleAxis<double>(options_.offsets[3], Eigen::Vector3d::UnitX()) *
-                                    Eigen::AngleAxis<double>(options_.offsets[4], Eigen::Vector3d::UnitY()) *
-                                    Eigen::AngleAxis<double>(options_.offsets[5], Eigen::Vector3d::UnitZ()));
+          Eigen::Isometry3d offset_tf(Eigen::AngleAxis<double>(options_.offsets[3], Eigen::Vector3d::UnitX()) *
+                                      Eigen::AngleAxis<double>(options_.offsets[4], Eigen::Vector3d::UnitY()) *
+                                      Eigen::AngleAxis<double>(options_.offsets[5], Eigen::Vector3d::UnitZ()));
           offset_tf.translation() = Eigen::Vector3d(options_.offsets[0], options_.offsets[1], options_.offsets[2]);
 
           // Apply waypoint offsets, check fields
@@ -464,12 +464,11 @@ void moveit_benchmarks::BenchmarkExecution::runAllBenchmarks(BenchmarkType type)
                                      .position;
               wMc_msg.orientation =
                   req.motion_plan_request.trajectory_constraints.constraints[tc].orientation_constraints[0].orientation;
-              Eigen::Affine3d wMc;
-              tf::poseMsgToEigen(wMc_msg, wMc);
+              Eigen::Isometry3d wMc;
+              tf2::fromMsg(wMc_msg, wMc);
 
-              Eigen::Affine3d wMnc = wMc * offset_tf;
-              geometry_msgs::Pose wMnc_msg;
-              tf::poseEigenToMsg(wMnc, wMnc_msg);
+              Eigen::Isometry3d wMnc = wMc * offset_tf;
+              geometry_msgs::Pose wMnc_msg = tf2::toMsg(wMnc);
 
               req.motion_plan_request.trajectory_constraints.constraints[tc]
                   .position_constraints[0]
@@ -514,38 +513,29 @@ bool moveit_benchmarks::BenchmarkExecution::readOptions(const std::string& filen
   try
   {
     boost::program_options::options_description desc;
-    desc.add_options()("scene.name", boost::program_options::value<std::string>(), "Scene name")(
-        "scene.runs", boost::program_options::value<std::string>()->default_value("1"), "Number of runs")(
-        "scene.timeout", boost::program_options::value<std::string>()->default_value(""),
-        "Timeout for planning (s)")("scene.start", boost::program_options::value<std::string>()->default_value(""),
-                                    "Regex for the start states to use")(
-        "scene.query", boost::program_options::value<std::string>()->default_value(".*"),
-        "Regex for the queries to execute")("scene.goal",
-                                            boost::program_options::value<std::string>()->default_value(""),
-                                            "Regex for the names of constraints to use as goals")(
-        "scene.trajectory", boost::program_options::value<std::string>()->default_value(""),
-        "Regex for the names of constraints to use as trajectories")(
-        "scene.group", boost::program_options::value<std::string>()->default_value(""),
-        "Override the group to plan for")("scene.planning_frame",
-                                          boost::program_options::value<std::string>()->default_value(""),
-                                          "Override the planning frame to use")(
-        "scene.default_constrained_link", boost::program_options::value<std::string>()->default_value(""),
-        "Specify the default link to consider as constrained when one is not specified in a moveit_msgs::Constraints "
-        "message")("scene.goal_offset_x", boost::program_options::value<std::string>()->default_value("0.0"),
-                   "Goal offset in x")(
-        "scene.goal_offset_y", boost::program_options::value<std::string>()->default_value("0.0"), "Goal offset in y")(
-        "scene.goal_offset_z", boost::program_options::value<std::string>()->default_value("0.0"),
-        "Goal offset in z")("scene.goal_offset_roll",
-                            boost::program_options::value<std::string>()->default_value("0.0"), "Goal offset in roll")(
-        "scene.goal_offset_pitch", boost::program_options::value<std::string>()->default_value("0.0"),
-        "Goal offset in pitch")("scene.goal_offset_yaw",
-                                boost::program_options::value<std::string>()->default_value("0.0"),
-                                "Goal offset in yaw")("scene.output", boost::program_options::value<std::string>(),
-                                                      "Location of benchmark log file")(
-        "scene.workspace", boost::program_options::value<std::string>(), "Bounding box of workspace to plan in - "
-                                                                         "min_x, min_y, min_z, max_x, max_y, max_z")(
-        "scene.workspace_frame", boost::program_options::value<std::string>(), "Frame id of bounding box of workspace "
-                                                                               "to plan in");
+    // clang-format off
+    desc.add_options()
+      ("scene.name", boost::program_options::value<std::string>(), "Scene name")
+      ("scene.runs", boost::program_options::value<std::string>()->default_value("1"), "Number of runs")
+      ("scene.timeout", boost::program_options::value<std::string>()->default_value(""), "Timeout for planning (s)")
+      ("scene.start", boost::program_options::value<std::string>()->default_value(""), "Regex for the start states to use")
+      ("scene.query", boost::program_options::value<std::string>()->default_value(".*"), "Regex for the queries to execute")
+      ("scene.goal", boost::program_options::value<std::string>()->default_value(""), "Regex for the names of constraints to use as goals")
+      ("scene.trajectory", boost::program_options::value<std::string>()->default_value(""), "Regex for the names of constraints to use as trajectories")
+      ("scene.group", boost::program_options::value<std::string>()->default_value(""), "Override the group to plan for")
+      ("scene.planning_frame", boost::program_options::value<std::string>()->default_value(""), "Override the planning frame to use")
+      ("scene.default_constrained_link", boost::program_options::value<std::string>()->default_value(""),
+       "Specify the default link to consider as constrained when one is not specified in a moveit_msgs::Constraints message")
+      ("scene.goal_offset_x", boost::program_options::value<std::string>()->default_value("0.0"), "Goal offset in x")
+      ("scene.goal_offset_y", boost::program_options::value<std::string>()->default_value("0.0"), "Goal offset in y")
+      ("scene.goal_offset_z", boost::program_options::value<std::string>()->default_value("0.0"), "Goal offset in z")
+      ("scene.goal_offset_roll", boost::program_options::value<std::string>()->default_value("0.0"), "Goal offset in roll")
+      ("scene.goal_offset_pitch", boost::program_options::value<std::string>()->default_value("0.0"), "Goal offset in pitch")
+      ("scene.goal_offset_yaw", boost::program_options::value<std::string>()->default_value("0.0"), "Goal offset in yaw")
+      ("scene.output", boost::program_options::value<std::string>(), "Location of benchmark log file")
+      ("scene.workspace", boost::program_options::value<std::string>(), "Bounding box of workspace to plan in - min_x, min_y, min_z, max_x, max_y, max_z")
+      ("scene.workspace_frame", boost::program_options::value<std::string>(), "Frame id of bounding box of workspace to plan in");
+    // clang-format on
 
     boost::program_options::variables_map vm;
     boost::program_options::parsed_options po = boost::program_options::parse_config_file(cfg, desc, true);
@@ -594,7 +584,7 @@ bool moveit_benchmarks::BenchmarkExecution::readOptions(const std::string& filen
 
       if (strings.size() != 6)
       {
-        ROS_WARN_STREAM("Invalid number of workspace parameters. Expected 6, recieved " << strings.size());
+        ROS_WARN_STREAM("Invalid number of workspace parameters. Expected 6, received " << strings.size());
       }
       else if (declared_options["scene.workspace_frame"].empty())
       {
@@ -720,7 +710,7 @@ bool moveit_benchmarks::BenchmarkExecution::readOptions(const std::string& filen
         if (strings.size() != 3)
         {
           ROS_WARN_STREAM("Invalid sweep parameter for key "
-                          << sweep_var << ". Expected 3 values (start, iterator, end) but only recieved "
+                          << sweep_var << ". Expected 3 values (start, iterator, end) but only received "
                           << strings.size());
           continue;
         }

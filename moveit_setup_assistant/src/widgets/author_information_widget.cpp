@@ -42,22 +42,12 @@
 #include <QSplitter>
 // ROS
 #include "author_information_widget.h"
-#include <srdfdom/model.h>  // use their struct datastructures
 #include <ros/ros.h>
-// Boost
-#include <boost/algorithm/string.hpp>  // for trimming whitespace from user input
-#include <boost/filesystem.hpp>        // for creating folders/files
-// Read write files
-#include <iostream>  // For writing yaml and launch files
-#include <fstream>
 
 namespace moveit_setup_assistant
 {
-// Boost file system
-namespace fs = boost::filesystem;
-
 // ******************************************************************************************
-// Outer User Interface for MoveIt Configuration Assistant
+// Outer User Interface for MoveIt! Configuration Assistant
 // ******************************************************************************************
 AuthorInformationWidget::AuthorInformationWidget(QWidget* parent,
                                                  moveit_setup_assistant::MoveItConfigDataPtr config_data)
@@ -69,11 +59,11 @@ AuthorInformationWidget::AuthorInformationWidget(QWidget* parent,
 
   // Top Header Area ------------------------------------------------
 
-  HeaderWidget* header =
-      new HeaderWidget("Author Information", "Specify contact information of the author and initial maintainer of the "
-                                             "generated package. catkin requires valid details in the package's "
-                                             "package.xml",
-                       this);
+  HeaderWidget* header = new HeaderWidget("Specify Author Information",
+                                          "Input contact information of the author and initial maintainer of the "
+                                          "generated package. catkin requires valid details in the package's "
+                                          "package.xml",
+                                          this);
   layout->addWidget(header);
 
   QLabel* name_title = new QLabel(this);

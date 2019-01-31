@@ -2,6 +2,45 @@
 Changelog for package moveit_simple_controller_manager
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.10.8 (2018-12-24)
+-------------------
+
+0.10.7 (2018-12-13)
+-------------------
+
+0.10.6 (2018-12-09)
+-------------------
+* [maintenance] Code Cleanup (`#1196 <https://github.com/ros-planning/moveit/issues/1196>`_)
+* Contributors: Robert Haschke
+
+0.10.5 (2018-11-01)
+-------------------
+
+0.10.4 (2018-10-29)
+-------------------
+
+0.10.3 (2018-10-29)
+-------------------
+
+0.10.2 (2018-10-24)
+-------------------
+* [maintenance] various compiler warnings (`#1038 <https://github.com/ros-planning/moveit/issues/1038>`_)
+* [maintenance] add minimum required pluginlib version (`#927 <https://github.com/ros-planning/moveit/issues/927>`_)
+* Contributors: Mikael Arguedas, Mohmmad Ayman, Robert Haschke, mike lautman
+
+0.10.1 (2018-05-25)
+-------------------
+* switch to ROS_LOGGER from CONSOLE_BRIDGE (`#874 <https://github.com/ros-planning/moveit/issues/874>`_)
+* Contributors: Mikael Arguedas, Xiaojian Ma
+
+0.9.11 (2017-12-25)
+-------------------
+
+0.9.10 (2017-12-09)
+-------------------
+* [capability][kinetic onward] optionally wait for controllers indefinitely (`#695 <https://github.com/ros-planning/moveit/issues/695>`_)
+* Contributors: Bruno Brito, Michael Görner
+
 0.9.9 (2017-08-06)
 ------------------
 
@@ -29,7 +68,7 @@ Changelog for package moveit_simple_controller_manager
 * Contributors: Dave Coleman, Michael Ferguson
 
 0.9.3 (2016-11-16)
------------
+------------------
 
 0.5.7 (2016-01-30)
 ------------------

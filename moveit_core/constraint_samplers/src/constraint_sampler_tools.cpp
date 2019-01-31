@@ -59,7 +59,7 @@ double constraint_samplers::countSamplesPerSecond(const ConstraintSamplerPtr& sa
 {
   if (!sampler)
   {
-    logError("No sampler specified for counting samples per second");
+    ROS_ERROR_NAMED("constraint_samplers", "No sampler specified for counting samples per second");
     return 0.0;
   }
   robot_state::RobotState ks(reference_state);
@@ -68,9 +68,9 @@ double constraint_samplers::countSamplesPerSecond(const ConstraintSamplerPtr& sa
   ros::WallTime end = ros::WallTime::now() + ros::WallDuration(1.0);
   do
   {
-    static const unsigned int n = 10;
-    total += n;
-    for (unsigned int i = 0; i < n; ++i)
+    static const unsigned int N = 10;
+    total += N;
+    for (unsigned int i = 0; i < N; ++i)
     {
       if (sampler->sample(ks, 1))
         valid++;
@@ -86,7 +86,7 @@ void constraint_samplers::visualizeDistribution(const ConstraintSamplerPtr& samp
 {
   if (!sampler)
   {
-    logError("No sampler specified for visualizing distribution of samples");
+    ROS_ERROR_NAMED("constraint_samplers", "No sampler specified for visualizing distribution of samples");
     return;
   }
   const robot_state::LinkModel* lm = reference_state.getLinkModel(link_name);

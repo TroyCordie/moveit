@@ -260,7 +260,7 @@ public:
   {
   }
 
-  virtual void robotStateChanged()
+  void robotStateChanged() override
   {
     cnt_++;
   }
@@ -614,7 +614,5 @@ TEST(LockedRobotState, set3mod3c3)
 int main(int argc, char** argv)
 {
   testing::InitGoogleTest(&argc, argv);
-  int arg;
-
   return RUN_ALL_TESTS();
 }

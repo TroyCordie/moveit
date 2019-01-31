@@ -41,7 +41,6 @@
 #include <moveit/ompl_interface/planning_context_manager.h>
 #include <moveit/kinematic_constraints/kinematic_constraint.h>
 #include <ompl/base/StateStorage.h>
-#include <boost/function.hpp>
 #include <boost/serialization/map.hpp>
 
 namespace ompl_interface
@@ -55,9 +54,9 @@ MOVEIT_CLASS_FORWARD(ConstraintApproximation)
 class ConstraintApproximation
 {
 public:
-  ConstraintApproximation(const std::string& group, const std::string& state_space_parameterization,
-                          bool explicit_motions, const moveit_msgs::Constraints& msg, const std::string& filename,
-                          const ompl::base::StateStoragePtr& storage, std::size_t milestones = 0);
+  ConstraintApproximation(std::string group, std::string state_space_parameterization, bool explicit_motions,
+                          moveit_msgs::Constraints msg, std::string filename, ompl::base::StateStoragePtr storage,
+                          std::size_t milestones = 0);
 
   virtual ~ConstraintApproximation()
   {
@@ -170,14 +169,16 @@ public:
 
   void saveConstraintApproximations(const std::string& path);
 
-  ConstraintApproximationConstructionResults addConstraintApproximation(
-      const moveit_msgs::Constraints& constr_sampling, const moveit_msgs::Constraints& constr_hard,
-      const std::string& group, const planning_scene::PlanningSceneConstPtr& scene,
-      const ConstraintApproximationConstructionOptions& options);
+  ConstraintApproximationConstructionResults
+  addConstraintApproximation(const moveit_msgs::Constraints& constr_sampling,
+                             const moveit_msgs::Constraints& constr_hard, const std::string& group,
+                             const planning_scene::PlanningSceneConstPtr& scene,
+                             const ConstraintApproximationConstructionOptions& options);
 
-  ConstraintApproximationConstructionResults addConstraintApproximation(
-      const moveit_msgs::Constraints& constr, const std::string& group,
-      const planning_scene::PlanningSceneConstPtr& scene, const ConstraintApproximationConstructionOptions& options);
+  ConstraintApproximationConstructionResults
+  addConstraintApproximation(const moveit_msgs::Constraints& constr, const std::string& group,
+                             const planning_scene::PlanningSceneConstPtr& scene,
+                             const ConstraintApproximationConstructionOptions& options);
 
   void printConstraintApproximations(std::ostream& out = std::cout) const;
   void clearConstraintApproximations();

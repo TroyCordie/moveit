@@ -47,7 +47,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 
 // Eigen
-#include <eigen_conversions/eigen_msg.h>
+#include <tf2_eigen/tf2_eigen.h>
 #include <Eigen/Geometry>
 
 namespace moveit
@@ -228,10 +228,11 @@ SemanticWorld::generatePlacePoses(const std::string& table_name, const shapes::S
   return place_poses;
 }
 
-std::vector<geometry_msgs::PoseStamped> SemanticWorld::generatePlacePoses(
-    const object_recognition_msgs::Table& chosen_table, const shapes::ShapeConstPtr& object_shape,
-    const geometry_msgs::Quaternion& object_orientation, double resolution, double delta_height,
-    unsigned int num_heights) const
+std::vector<geometry_msgs::PoseStamped>
+SemanticWorld::generatePlacePoses(const object_recognition_msgs::Table& chosen_table,
+                                  const shapes::ShapeConstPtr& object_shape,
+                                  const geometry_msgs::Quaternion& object_orientation, double resolution,
+                                  double delta_height, unsigned int num_heights) const
 {
   std::vector<geometry_msgs::PoseStamped> place_poses;
   if (object_shape->type != shapes::MESH && object_shape->type != shapes::SPHERE && object_shape->type != shapes::BOX &&
@@ -245,7 +246,7 @@ std::vector<geometry_msgs::PoseStamped> SemanticWorld::generatePlacePoses(
   double z_min(std::numeric_limits<double>::max()), z_max(-std::numeric_limits<double>::max());
 
   Eigen::Quaterniond rotation(object_orientation.x, object_orientation.y, object_orientation.z, object_orientation.w);
-  Eigen::Affine3d object_pose(rotation);
+  Eigen::Isometry3d object_pose(rotation);
   double min_distance_from_edge;
   double height_above_table;
 
@@ -367,8 +368,8 @@ std::vector<geometry_msgs::PoseStamped> SemanticWorld::generatePlacePoses(const 
         {
           Eigen::Vector3d point((double)(point_x) / scale_factor + x_min, (double)(point_y) / scale_factor + y_min,
                                 height_above_table + mm * delta_height);
-          Eigen::Affine3d pose;
-          tf::poseMsgToEigen(table.pose, pose);
+          Eigen::Isometry3d pose;
+          tf2::fromMsg(table.pose, pose);
           point = pose * point;
           geometry_msgs::PoseStamped place_pose;
           place_pose.pose.orientation.w = 1.0;
@@ -427,8 +428,8 @@ bool SemanticWorld::isInsideTableContour(const geometry_msgs::Pose& pose, const 
   cv::findContours(src, contours, hierarchy, cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE);
 
   Eigen::Vector3d point(pose.position.x, pose.position.y, pose.position.z);
-  Eigen::Affine3d pose_table;
-  tf::poseMsgToEigen(table.pose, pose_table);
+  Eigen::Isometry3d pose_table;
+  tf2::fromMsg(table.pose, pose_table);
 
   // Point in table frame
   point = pose_table.inverse() * point;
@@ -488,11 +489,11 @@ void SemanticWorld::transformTableArray(object_recognition_msgs::TableArray& tab
                                       << table_array.tables[i].pose.position.y << ","
                                       << table_array.tables[i].pose.position.z);
     std::string error_text;
-    const Eigen::Affine3d& original_transform = planning_scene_->getTransforms().getTransform(original_frame);
-    Eigen::Affine3d original_pose;
-    tf::poseMsgToEigen(table_array.tables[i].pose, original_pose);
+    const Eigen::Isometry3d& original_transform = planning_scene_->getTransforms().getTransform(original_frame);
+    Eigen::Isometry3d original_pose;
+    tf2::fromMsg(table_array.tables[i].pose, original_pose);
     original_pose = original_transform * original_pose;
-    tf::poseEigenToMsg(original_pose, table_array.tables[i].pose);
+    table_array.tables[i].pose = tf2::toMsg(original_pose);
     table_array.tables[i].header.frame_id = planning_scene_->getTransforms().getTargetFrame();
     ROS_INFO_STREAM("Successfully transformed table array from " << original_frame << "to "
                                                                  << table_array.tables[i].header.frame_id);

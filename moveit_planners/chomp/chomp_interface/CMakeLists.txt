@@ -1,24 +1,25 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(moveit_planners_chomp)
 
-add_definitions(-std=c++11)
+add_definitions(-std=c++14)
+
+# find catkin in isolation so that CATKIN_ENABLE_TESTING is defined
+find_package(catkin REQUIRED)
+if (CATKIN_ENABLE_TESTING)
+  set(CHOMP_TEST_DEPS moveit_ros_planning_interface)
+else()
+  set(CHOMP_TEST_DEPS)
+endif()
 
 find_package(catkin REQUIRED COMPONENTS
-  cmake_modules
   roscpp
   moveit_core
   pluginlib
   chomp_motion_planner
-  moveit_experimental
+  ${CHOMP_TEST_DEPS}
 )
 
 find_package(Eigen3 REQUIRED)
-
-# Eigen 3.2 (Wily) only provides EIGEN3_INCLUDE_DIR, not EIGEN3_INCLUDE_DIRS
-if(NOT EIGEN3_INCLUDE_DIRS)
-  set(EIGEN3_INCLUDE_DIRS ${EIGEN3_INCLUDE_DIR})
-endif()
-
 find_package(Boost REQUIRED)
 
 catkin_package(
@@ -30,7 +31,8 @@ catkin_package(
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
-  ${Boost_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIRS}
+  ${Boost_INCLUDE_DIRS}
+  ${EIGEN3_INCLUDE_DIRS}
 )
 
 add_library(${PROJECT_NAME} src/chomp_interface.cpp src/chomp_planning_context.cpp)
@@ -53,3 +55,14 @@ install(TARGETS ${PROJECT_NAME} chomp_planner_plugin
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
+
+if(CATKIN_ENABLE_TESTING)
+  # additional test dependencies
+  find_package(rostest REQUIRED)
+  add_rostest_gtest(chomp_moveit_test
+    test/chomp_moveit.test
+    test/chomp_moveit_test.cpp)
+  target_link_libraries(chomp_moveit_test
+    ${catkin_LIBRARIES}
+    ${rostest_LIBRARIES})
+endif()

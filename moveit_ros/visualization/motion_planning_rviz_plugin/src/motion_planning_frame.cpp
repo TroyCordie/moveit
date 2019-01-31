@@ -34,6 +34,7 @@
 
 /* Author: Ioan Sucan */
 
+#include <moveit/common_planning_interface_objects/common_objects.h>
 #include <moveit/motion_planning_rviz_plugin/motion_planning_frame.h>
 #include <moveit/motion_planning_rviz_plugin/motion_planning_display.h>
 #include <moveit/move_group/capability_names.h>
@@ -42,6 +43,7 @@
 
 #include <rviz/display_context.h>
 #include <rviz/frame_manager.h>
+#include <tf2_ros/buffer.h>
 
 #include <std_srvs/Empty.h>
 
@@ -71,8 +73,10 @@ MotionPlanningFrame::MotionPlanningFrame(MotionPlanningDisplay* pdisplay, rviz::
   connect(ui_->execute_button, SIGNAL(clicked()), this, SLOT(executeButtonClicked()));
   connect(ui_->plan_and_execute_button, SIGNAL(clicked()), this, SLOT(planAndExecuteButtonClicked()));
   connect(ui_->stop_button, SIGNAL(clicked()), this, SLOT(stopButtonClicked()));
-  connect(ui_->use_start_state_button, SIGNAL(clicked()), this, SLOT(useStartStateButtonClicked()));
-  connect(ui_->use_goal_state_button, SIGNAL(clicked()), this, SLOT(useGoalStateButtonClicked()));
+  connect(ui_->start_state_combo_box, SIGNAL(activated(QString)), this, SLOT(startStateTextChanged(QString)));
+  connect(ui_->goal_state_combo_box, SIGNAL(activated(QString)), this, SLOT(goalStateTextChanged(QString)));
+  connect(ui_->planning_group_combo_box, SIGNAL(currentIndexChanged(QString)), this,
+          SLOT(planningGroupTextChanged(QString)));
   connect(ui_->database_connect_button, SIGNAL(clicked()), this, SLOT(databaseConnectButtonClicked()));
   connect(ui_->save_scene_button, SIGNAL(clicked()), this, SLOT(saveSceneButtonClicked()));
   connect(ui_->save_query_button, SIGNAL(clicked()), this, SLOT(saveQueryButtonClicked()));
@@ -146,7 +150,7 @@ MotionPlanningFrame::MotionPlanningFrame(MotionPlanningDisplay* pdisplay, rviz::
   planning_scene_publisher_ = nh_.advertise<moveit_msgs::PlanningScene>("planning_scene", 1);
   planning_scene_world_publisher_ = nh_.advertise<moveit_msgs::PlanningSceneWorld>("planning_scene_world", 1);
 
-  //  object_recognition_trigger_publisher_ = nh_.advertise<std_msgs::Bool>("recognize_objects_switch", 1);
+  // object_recognition_trigger_publisher_ = nh_.advertise<std_msgs::Bool>("recognize_objects_switch", 1);
   object_recognition_client_.reset(new actionlib::SimpleActionClient<object_recognition_msgs::ObjectRecognitionAction>(
       OBJECT_RECOGNITION_ACTION, false));
   object_recognition_subscriber_ =
@@ -160,7 +164,7 @@ MotionPlanningFrame::MotionPlanningFrame(MotionPlanningDisplay* pdisplay, rviz::
     }
     catch (std::exception& ex)
     {
-      //      ROS_ERROR("Object recognition action: %s", ex.what());
+      // ROS_ERROR("Object recognition action: %s", ex.what());
       object_recognition_client_.reset();
     }
   }
@@ -195,6 +199,7 @@ MotionPlanningFrame::MotionPlanningFrame(MotionPlanningDisplay* pdisplay, rviz::
 
 MotionPlanningFrame::~MotionPlanningFrame()
 {
+  delete ui_;
 }
 
 void MotionPlanningFrame::approximateIKChanged(int state)
@@ -205,12 +210,17 @@ void MotionPlanningFrame::approximateIKChanged(int state)
 void MotionPlanningFrame::setItemSelectionInList(const std::string& item_name, bool selection, QListWidget* list)
 {
   QList<QListWidgetItem*> found_items = list->findItems(QString(item_name.c_str()), Qt::MatchExactly);
-  for (std::size_t i = 0; i < found_items.size(); ++i)
+  for (int i = 0; i < found_items.size(); ++i)
     found_items[i]->setSelected(selection);
 }
 
 void MotionPlanningFrame::allowExternalProgramCommunication(bool enable)
 {
+  // This is needed to prevent UI event (resuming the options) triggered
+  // before getRobotInteraction() is loaded and ready
+  if (first_time_)
+    return;
+
   planning_display_->getRobotInteraction()->toggleMoveInteractiveMarkerTopic(enable);
   planning_display_->toggleSelectPlanningGroupSubscription(enable);
   if (enable)
@@ -218,58 +228,79 @@ void MotionPlanningFrame::allowExternalProgramCommunication(bool enable)
     ros::NodeHandle nh;
     plan_subscriber_ = nh.subscribe("/rviz/moveit/plan", 1, &MotionPlanningFrame::remotePlanCallback, this);
     execute_subscriber_ = nh.subscribe("/rviz/moveit/execute", 1, &MotionPlanningFrame::remoteExecuteCallback, this);
+    stop_subscriber_ = nh.subscribe("/rviz/moveit/stop", 1, &MotionPlanningFrame::remoteStopCallback, this);
     update_start_state_subscriber_ =
         nh.subscribe("/rviz/moveit/update_start_state", 1, &MotionPlanningFrame::remoteUpdateStartStateCallback, this);
     update_goal_state_subscriber_ =
         nh.subscribe("/rviz/moveit/update_goal_state", 1, &MotionPlanningFrame::remoteUpdateGoalStateCallback, this);
+    update_custom_start_state_subscriber_ = nh.subscribe(
+        "/rviz/moveit/update_custom_start_state", 1, &MotionPlanningFrame::remoteUpdateCustomStartStateCallback, this);
+    update_custom_goal_state_subscriber_ = nh.subscribe(
+        "/rviz/moveit/update_custom_goal_state", 1, &MotionPlanningFrame::remoteUpdateCustomGoalStateCallback, this);
   }
   else
   {  // disable
     plan_subscriber_.shutdown();
     execute_subscriber_.shutdown();
+    stop_subscriber_.shutdown();
     update_start_state_subscriber_.shutdown();
     update_goal_state_subscriber_.shutdown();
+    update_custom_start_state_subscriber_.shutdown();
+    update_custom_goal_state_subscriber_.shutdown();
   }
+}
+
+void MotionPlanningFrame::fillPlanningGroupOptions()
+{
+  const QSignalBlocker planning_group_blocker(ui_->planning_group_combo_box);
+  ui_->planning_group_combo_box->clear();
+
+  const robot_model::RobotModelConstPtr& kmodel = planning_display_->getRobotModel();
+  for (const std::string group_name : kmodel->getJointModelGroupNames())
+    ui_->planning_group_combo_box->addItem(QString::fromStdString(group_name));
 }
 
 void MotionPlanningFrame::fillStateSelectionOptions()
 {
-  ui_->start_state_selection->clear();
-  ui_->goal_state_selection->clear();
+  const QSignalBlocker start_state_blocker(ui_->start_state_combo_box);
+  const QSignalBlocker goal_state_blocker(ui_->goal_state_combo_box);
+  ui_->start_state_combo_box->clear();
+  ui_->goal_state_combo_box->clear();
 
   if (!planning_display_->getPlanningSceneMonitor())
     return;
 
-  const robot_model::RobotModelConstPtr& kmodel = planning_display_->getRobotModel();
+  const robot_model::RobotModelConstPtr& robot_model = planning_display_->getRobotModel();
   std::string group = planning_display_->getCurrentPlanningGroup();
   if (group.empty())
     return;
-  const robot_model::JointModelGroup* jmg = kmodel->getJointModelGroup(group);
+  const robot_model::JointModelGroup* jmg = robot_model->getJointModelGroup(group);
   if (jmg)
   {
-    ui_->start_state_selection->addItem(QString("<random valid>"));
-    ui_->start_state_selection->addItem(QString("<random>"));
-    ui_->start_state_selection->addItem(QString("<current>"));
-    ui_->start_state_selection->addItem(QString("<same as goal>"));
+    ui_->start_state_combo_box->addItem(QString("<random valid>"));
+    ui_->start_state_combo_box->addItem(QString("<random>"));
+    ui_->start_state_combo_box->addItem(QString("<current>"));
+    ui_->start_state_combo_box->addItem(QString("<same as goal>"));
 
-    ui_->goal_state_selection->addItem(QString("<random valid>"));
-    ui_->goal_state_selection->addItem(QString("<random>"));
-    ui_->goal_state_selection->addItem(QString("<current>"));
-    ui_->goal_state_selection->addItem(QString("<same as start>"));
+    ui_->goal_state_combo_box->addItem(QString("<random valid>"));
+    ui_->goal_state_combo_box->addItem(QString("<random>"));
+    ui_->goal_state_combo_box->addItem(QString("<current>"));
+    ui_->goal_state_combo_box->addItem(QString("<same as start>"));
 
     const std::vector<std::string>& known_states = jmg->getDefaultStateNames();
     if (!known_states.empty())
     {
-      ui_->start_state_selection->insertSeparator(ui_->start_state_selection->count());
-      ui_->goal_state_selection->insertSeparator(ui_->goal_state_selection->count());
+      ui_->start_state_combo_box->insertSeparator(ui_->start_state_combo_box->count());
+      ui_->goal_state_combo_box->insertSeparator(ui_->goal_state_combo_box->count());
       for (std::size_t i = 0; i < known_states.size(); ++i)
       {
-        ui_->start_state_selection->addItem(QString::fromStdString(known_states[i]));
-        ui_->goal_state_selection->addItem(QString::fromStdString(known_states[i]));
+        ui_->start_state_combo_box->addItem(QString::fromStdString(known_states[i]));
+        ui_->goal_state_combo_box->addItem(QString::fromStdString(known_states[i]));
       }
     }
-    ui_->start_state_selection->setCurrentIndex(2);  // default to 'current'
-    ui_->goal_state_selection->setCurrentIndex(0);   // default to 'random valid'
+
+    ui_->start_state_combo_box->setCurrentIndex(2);  // default to 'current'
+    ui_->goal_state_combo_box->setCurrentIndex(2);   // default to 'current'
   }
 }
 
@@ -282,25 +313,32 @@ void MotionPlanningFrame::changePlanningGroupHelper()
   planning_display_->addMainLoopJob(
       boost::bind(&MotionPlanningFrame::populateConstraintsList, this, std::vector<std::string>()));
 
-  const robot_model::RobotModelConstPtr& kmodel = planning_display_->getRobotModel();
+  const robot_model::RobotModelConstPtr& robot_model = planning_display_->getRobotModel();
   std::string group = planning_display_->getCurrentPlanningGroup();
   planning_display_->addMainLoopJob(
       boost::bind(&MotionPlanningParamWidget::setGroupName, ui_->planner_param_treeview, group));
+  planning_display_->addMainLoopJob(
+      [=]() { ui_->planning_group_combo_box->setCurrentText(QString::fromStdString(group)); });
 
-  if (!group.empty() && kmodel)
+  if (!group.empty() && robot_model)
   {
     if (move_group_ && move_group_->getName() == group)
       return;
     ROS_INFO("Constructing new MoveGroup connection for group '%s' in namespace '%s'", group.c_str(),
              planning_display_->getMoveGroupNS().c_str());
     moveit::planning_interface::MoveGroupInterface::Options opt(group);
-    opt.robot_model_ = kmodel;
+    opt.robot_model_ = robot_model;
     opt.robot_description_.clear();
     opt.node_handle_ = ros::NodeHandle(planning_display_->getMoveGroupNS());
     try
     {
-      move_group_.reset(new moveit::planning_interface::MoveGroupInterface(
-          opt, context_->getFrameManager()->getTFClientPtr(), ros::WallDuration(30, 0)));
+#ifdef RVIZ_TF1
+      std::shared_ptr<tf2_ros::Buffer> tf_buffer = moveit::planning_interface::getSharedTF();
+#else
+      std::shared_ptr<tf2_ros::Buffer> tf_buffer = context_->getFrameManager()->getTF2BufferPtr();
+#endif
+      move_group_.reset(new moveit::planning_interface::MoveGroupInterface(opt, tf_buffer, ros::WallDuration(30, 0)));
+
       if (planning_scene_storage_)
         move_group_->setConstraintsDatabase(ui_->database_host->text().toStdString(), ui_->database_port->value());
     }
@@ -314,6 +352,8 @@ void MotionPlanningFrame::changePlanningGroupHelper()
     {
       move_group_->allowLooking(ui_->allow_looking->isChecked());
       move_group_->allowReplanning(ui_->allow_replanning->isChecked());
+      bool hasUniqueEndeffector = !move_group_->getEndEffectorLink().empty();
+      planning_display_->addMainLoopJob([=]() { ui_->use_cartesian_path->setEnabled(hasUniqueEndeffector); });
       moveit_msgs::PlannerInterfaceDescription desc;
       if (move_group_->getInterfaceDescription(desc))
         planning_display_->addMainLoopJob(boost::bind(&MotionPlanningFrame::populatePlannersList, this, desc));
@@ -329,6 +369,11 @@ void MotionPlanningFrame::changePlanningGroupHelper()
           planning_display_->setQueryStartState(ps->getCurrentState());
           planning_display_->setQueryGoalState(ps->getCurrentState());
         }
+        // This ensures saved UI settings applied after planning_display_ is ready
+        planning_display_->useApproximateIK(ui_->approximate_ik->isChecked());
+        if (ui_->allow_external_program->isChecked())
+          planning_display_->addMainLoopJob(
+              boost::bind(&MotionPlanningFrame::allowExternalProgramCommunication, this, true));
       }
     }
   }
@@ -356,7 +401,7 @@ void MotionPlanningFrame::importResource(const std::string& path)
       std::size_t slash = path.find_last_of("/\\");
       std::string name = path.substr(slash + 1);
       shapes::ShapeConstPtr shape(mesh);
-      Eigen::Affine3d pose;
+      Eigen::Isometry3d pose;
       pose.setIdentity();
 
       if (planning_display_->getPlanningSceneRO()->getCurrentState().hasAttachedBody(name))
@@ -450,14 +495,12 @@ void MotionPlanningFrame::enable()
 
   // activate the frame
   parentWidget()->show();
-  show();
 }
 
 void MotionPlanningFrame::disable()
 {
   move_group_.reset();
   parentWidget()->hide();
-  hide();
 }
 
 void MotionPlanningFrame::tabChanged(int index)

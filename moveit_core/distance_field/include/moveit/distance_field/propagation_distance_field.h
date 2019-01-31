@@ -45,6 +45,11 @@
 #include <set>
 #include <octomap/octomap.h>
 
+namespace EigenSTL
+{
+typedef std::vector<Eigen::Vector3i, Eigen::aligned_allocator<Eigen::Vector3i>> vector_Vector3i;
+}
+
 namespace distance_field
 {
 /**
@@ -53,7 +58,7 @@ namespace distance_field
  */
 struct compareEigen_Vector3i
 {
-  bool operator()(Eigen::Vector3i loc_1, Eigen::Vector3i loc_2) const
+  bool operator()(const Eigen::Vector3i& loc_1, const Eigen::Vector3i& loc_2) const
   {
     if (loc_1.z() != loc_2.z())
       return (loc_1.z() < loc_2.z());
@@ -102,6 +107,7 @@ struct PropDistanceFieldVoxel
                                      propagation*/
 
   static const int UNINITIALIZED = -1; /**< \brief Value that represents an unitialized voxel */
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
 
 /**
@@ -215,7 +221,7 @@ public:
    *
    *
    */
-  virtual ~PropagationDistanceField()
+  ~PropagationDistanceField() override
   {
   }
 
@@ -232,7 +238,7 @@ public:
    *
    * @param [in] points The set of obstacle points to add
    */
-  virtual void addPointsToField(const EigenSTL::vector_Vector3d& points);
+  void addPointsToField(const EigenSTL::vector_Vector3d& points) override;
 
   /**
    * \brief Remove a set of obstacle points from the distance field,
@@ -253,7 +259,7 @@ public:
    *
    * @param [in] points The set of obstacle points that will be set as free
    */
-  virtual void removePointsFromField(const EigenSTL::vector_Vector3d& points);
+  void removePointsFromField(const EigenSTL::vector_Vector3d& points) override;
 
   /**
    * \brief This function will remove any obstacle points that are in
@@ -277,15 +283,15 @@ public:
    * @param [in] new_points The set of points, all of which are intended to be obstacle points in the distance field
    *
    */
-  virtual void updatePointsInField(const EigenSTL::vector_Vector3d& old_points,
-                                   const EigenSTL::vector_Vector3d& new_points);
+  void updatePointsInField(const EigenSTL::vector_Vector3d& old_points,
+                           const EigenSTL::vector_Vector3d& new_points) override;
 
   /**
    * \brief Resets the entire distance field to max_distance for
    * positive values and zero for negative values.
    *
    */
-  virtual void reset();
+  void reset() override;
 
   /**
    * \brief Get the distance value associated with the cell indicated
@@ -302,7 +308,7 @@ public:
    *
    * @return The distance value
    */
-  virtual double getDistance(double x, double y, double z) const;
+  double getDistance(double x, double y, double z) const override;
 
   /**
    * \brief Get the distance value associated with the cell indicated
@@ -319,14 +325,14 @@ public:
    *
    * @return The distance value for the cell
    */
-  virtual double getDistance(int x, int y, int z) const;
+  double getDistance(int x, int y, int z) const override;
 
-  virtual bool isCellValid(int x, int y, int z) const;
-  virtual int getXNumCells() const;
-  virtual int getYNumCells() const;
-  virtual int getZNumCells() const;
-  virtual bool gridToWorld(int x, int y, int z, double& world_x, double& world_y, double& world_z) const;
-  virtual bool worldToGrid(double world_x, double world_y, double world_z, int& x, int& y, int& z) const;
+  bool isCellValid(int x, int y, int z) const override;
+  int getXNumCells() const override;
+  int getYNumCells() const override;
+  int getZNumCells() const override;
+  bool gridToWorld(int x, int y, int z, double& world_x, double& world_y, double& world_z) const override;
+  bool worldToGrid(double world_x, double world_y, double world_z, int& x, int& y, int& z) const override;
 
   /**
    * \brief Writes the contents of the distance field to the supplied stream.
@@ -344,7 +350,7 @@ public:
    *
    * @return True
    */
-  virtual bool writeToStream(std::ostream& stream) const;
+  bool writeToStream(std::ostream& stream) const override;
 
   /**
    * \brief Reads, parameterizes, and populates the distance field
@@ -362,10 +368,10 @@ public:
    * @return True if reading, parameterizing, and populating the
    * distance field is successful; otherwise False.
    */
-  virtual bool readFromStream(std::istream& stream);
+  bool readFromStream(std::istream& stream) override;
 
   // passthrough docs to DistanceField
-  virtual double getUninitializedDistance() const
+  double getUninitializedDistance() const override
   {
     return max_distance_;
   }
@@ -442,8 +448,8 @@ public:
   }
 
 private:
-  typedef std::set<Eigen::Vector3i, compareEigen_Vector3i> VoxelSet; /**< \brief Typedef for set of integer indices */
-
+  /** Typedef for set of integer indices */
+  typedef std::set<Eigen::Vector3i, compareEigen_Vector3i, Eigen::aligned_allocator<Eigen::Vector3i>> VoxelSet;
   /**
    * \brief Initializes the field, resetting the voxel grid and
    * building a sqrt lookup table for efficiency based on
@@ -457,14 +463,14 @@ private:
    *
    * @param voxel_points Valid set of voxel points for addition
    */
-  void addNewObstacleVoxels(const std::vector<Eigen::Vector3i>& voxel_points);
+  void addNewObstacleVoxels(const EigenSTL::vector_Vector3i& voxel_points);
 
   /**
    * \brief Removes a valid set of integer points from the voxel grid
    *
    * @param voxel_points Valid set of voxel points for removal
    */
-  void removeObstacleVoxels(const std::vector<Eigen::Vector3i>& voxel_points);
+  void removeObstacleVoxels(const EigenSTL::vector_Vector3i& voxel_points);
 
   /**
    * \brief Propagates outward to the maximum distance given the
@@ -521,14 +527,14 @@ private:
   void initNeighborhoods();
 
   /**
-   * \brief Debug function that prints all voxels in a set to logDebug
+   * \brief Debug function that prints all voxels in a set to ROS_DEBUG_NAMED
    *
    * @param set Voxel set to print
    */
   void print(const VoxelSet& set);
 
   /**
-   * \brief Debug function that prints all points in a vector to logDebug
+   * \brief Debug function that prints all points in a vector to ROS_DEBUG_NAMED
    *
    * @param points Points to print
    */
@@ -549,16 +555,16 @@ private:
   VoxelGrid<PropDistanceFieldVoxel>::Ptr voxel_grid_; /**< \brief Actual container for distance data */
 
   /// \brief Structure used to hold propagation frontier
-  std::vector<std::vector<Eigen::Vector3i> > bucket_queue_; /**< \brief Data member that holds points from which to
-                                                               propagate, where each vector holds points that are a
-                                                               particular integer distance from the closest obstacle
-                                                               points*/
+  std::vector<EigenSTL::vector_Vector3i> bucket_queue_; /**< \brief Data member that holds points from which to
+                                                              propagate, where each vector holds points that are a
+                                                              particular integer distance from the closest obstacle
+                                                              points*/
 
-  std::vector<std::vector<Eigen::Vector3i> > negative_bucket_queue_; /**< \brief Data member that holds points from
-                                                                        which to propagate in the negative, where each
-                                                                        vector holds points that are a particular
-                                                                        integer distance from the closest unoccupied
-                                                                        points*/
+  std::vector<EigenSTL::vector_Vector3i> negative_bucket_queue_; /**< \brief Data member that holds points from
+                                                                       which to propagate in the negative, where each
+                                                                       vector holds points that are a particular
+                                                                       integer distance from the closest unoccupied
+                                                                       points*/
 
   double max_distance_; /**< \brief Holds maximum distance  */
   int max_distance_sq_; /**< \brief Holds maximum distance squared in cells */
@@ -577,9 +583,9 @@ private:
    *
    */
 
-  std::vector<std::vector<std::vector<Eigen::Vector3i> > > neighborhoods_;
+  std::vector<std::vector<EigenSTL::vector_Vector3i>> neighborhoods_;
 
-  std::vector<Eigen::Vector3i> direction_number_to_direction_; /**< \brief Holds conversion from direction number to
+  EigenSTL::vector_Vector3i direction_number_to_direction_; /**< \brief Holds conversion from direction number to
                                                                   integer changes */
 };
 

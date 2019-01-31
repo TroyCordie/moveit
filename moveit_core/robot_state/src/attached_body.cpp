@@ -39,7 +39,7 @@
 
 moveit::core::AttachedBody::AttachedBody(const LinkModel* parent_link_model, const std::string& id,
                                          const std::vector<shapes::ShapeConstPtr>& shapes,
-                                         const EigenSTL::vector_Affine3d& attach_trans,
+                                         const EigenSTL::vector_Isometry3d& attach_trans,
                                          const std::set<std::string>& touch_links,
                                          const trajectory_msgs::JointTrajectory& detach_posture)
   : parent_link_model_(parent_link_model)
@@ -54,9 +54,7 @@ moveit::core::AttachedBody::AttachedBody(const LinkModel* parent_link_model, con
     global_collision_body_transforms_[i].setIdentity();
 }
 
-moveit::core::AttachedBody::~AttachedBody()
-{
-}
+moveit::core::AttachedBody::~AttachedBody() = default;
 
 void moveit::core::AttachedBody::setScale(double scale)
 {

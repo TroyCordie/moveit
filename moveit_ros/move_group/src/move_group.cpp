@@ -35,10 +35,9 @@
 /* Author: Ioan Sucan */
 
 #include <moveit/planning_scene_monitor/planning_scene_monitor.h>
-#include <tf/transform_listener.h>
+#include <tf2_ros/transform_listener.h>
 #include <moveit/move_group/capability_names.h>
 #include <moveit/move_group/move_group_capability.h>
-#include <boost/algorithm/string/join.hpp>
 #include <boost/tokenizer.hpp>
 #include <moveit/macros/console_colors.h>
 #include <moveit/move_group/node_name.h>
@@ -50,6 +49,23 @@ static const std::string ROBOT_DESCRIPTION =
 
 namespace move_group
 {
+// These capabilities are loaded unless listed in disable_capabilities
+// clang-format off
+static const char* DEFAULT_CAPABILITIES[] = {
+   "move_group/MoveGroupCartesianPathService",
+   "move_group/MoveGroupKinematicsService",
+   "move_group/MoveGroupExecuteTrajectoryAction",
+   "move_group/MoveGroupMoveAction",
+   "move_group/MoveGroupPickPlaceAction",
+   "move_group/MoveGroupPlanService",
+   "move_group/MoveGroupQueryPlannersService",
+   "move_group/MoveGroupStateValidationService",
+   "move_group/MoveGroupGetPlanningSceneService",
+   "move_group/ApplyPlanningSceneService",
+   "move_group/ClearOctomapService",
+};
+// clang-format on
+
 class MoveGroupExe
 {
 public:
@@ -134,17 +150,14 @@ private:
       try
       {
         printf(MOVEIT_CONSOLE_COLOR_CYAN "Loading '%s'...\n" MOVEIT_CONSOLE_COLOR_RESET, plugin->c_str());
-        MoveGroupCapability* cap = capability_plugin_loader_->createUnmanagedInstance(*plugin);
+        MoveGroupCapabilityPtr cap = capability_plugin_loader_->createUniqueInstance(*plugin);
         cap->setContext(context_);
         cap->initialize();
-        capabilities_.push_back(MoveGroupCapabilityPtr(cap));
+        capabilities_.push_back(cap);
       }
       catch (pluginlib::PluginlibException& ex)
       {
-        ROS_ERROR_STREAM("Exception while loading move_group capability '"
-                         << *plugin << "': " << ex.what() << std::endl
-                         << "Available capabilities: "
-                         << boost::algorithm::join(capability_plugin_loader_->getDeclaredClasses(), ", "));
+        ROS_ERROR_STREAM("Exception while loading move_group capability '" << *plugin << "': " << ex.what());
       }
     }
 
@@ -172,11 +185,13 @@ int main(int argc, char** argv)
 
   ros::AsyncSpinner spinner(1);
   spinner.start();
+  ros::NodeHandle nh;
 
-  boost::shared_ptr<tf::TransformListener> tf(new tf::TransformListener(ros::Duration(10.0)));
+  std::shared_ptr<tf2_ros::Buffer> tf_buffer = std::make_shared<tf2_ros::Buffer>(ros::Duration(10.0));
+  std::shared_ptr<tf2_ros::TransformListener> tfl = std::make_shared<tf2_ros::TransformListener>(*tf_buffer, nh);
 
   planning_scene_monitor::PlanningSceneMonitorPtr planning_scene_monitor(
-      new planning_scene_monitor::PlanningSceneMonitor(ROBOT_DESCRIPTION, tf));
+      new planning_scene_monitor::PlanningSceneMonitor(ROBOT_DESCRIPTION, tf_buffer));
 
   if (planning_scene_monitor->getPlanningScene())
   {
@@ -192,11 +207,11 @@ int main(int argc, char** argv)
     else
       ROS_INFO("MoveGroup debug mode is OFF");
 
-    printf(MOVEIT_CONSOLE_COLOR_CYAN "Starting context monitors...\n" MOVEIT_CONSOLE_COLOR_RESET);
+    printf(MOVEIT_CONSOLE_COLOR_CYAN "Starting planning scene monitors...\n" MOVEIT_CONSOLE_COLOR_RESET);
     planning_scene_monitor->startSceneMonitor();
     planning_scene_monitor->startWorldGeometryMonitor();
     planning_scene_monitor->startStateMonitor();
-    printf(MOVEIT_CONSOLE_COLOR_CYAN "Context monitors started.\n" MOVEIT_CONSOLE_COLOR_RESET);
+    printf(MOVEIT_CONSOLE_COLOR_CYAN "Planning scene monitors started.\n" MOVEIT_CONSOLE_COLOR_RESET);
 
     move_group::MoveGroupExe mge(planning_scene_monitor, debug);
 

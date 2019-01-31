@@ -2,6 +2,57 @@
 Changelog for package moveit_ros_perception
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.10.8 (2018-12-24)
+-------------------
+
+0.10.7 (2018-12-13)
+-------------------
+
+0.10.6 (2018-12-09)
+-------------------
+* [maintenance] Use createUniqueInstance() (`#1104 <https://github.com/ros-planning/moveit/issues/1104>`_)
+* [maintenance] Enforce OpenMP support for perception (`#1234 <https://github.com/ros-planning/moveit/issues/1234>`_)
+* [maintenance] Replaced Eigen::Affine3d -> Eigen::Isometry3d (`#1096 <https://github.com/ros-planning/moveit/issues/1096>`_)
+* [maintenance] Use C++14 (`#1146 <https://github.com/ros-planning/moveit/issues/1146>`_)
+* Contributors: Alex Moriarty, Michael Görner, Robert Haschke
+
+0.10.5 (2018-11-01)
+-------------------
+
+0.10.4 (2018-10-29)
+-------------------
+
+0.10.3 (2018-10-29)
+-------------------
+* [fix] compiler warnings (`#1089 <https://github.com/ros-planning/moveit/issues/1089>`_)
+* Contributors: Robert Haschke
+
+0.10.2 (2018-10-24)
+-------------------
+* [fix] Eigen alignment issuses due to missing aligned allocation (`#1039 <https://github.com/ros-planning/moveit/issues/1039>`_)
+* [fix] DepthImageOctomapUpdater not found error (`#954 <https://github.com/ros-planning/moveit/issues/954>`_)
+* [fix] planning scene lock when octomap updates too quickly (`#920 <https://github.com/ros-planning/moveit/issues/920>`_)
+* [enhancement] error message in shape_mask (`#828 <https://github.com/ros-planning/moveit/issues/828>`_)
+* [maintenance] various compiler warnings (`#1038 <https://github.com/ros-planning/moveit/issues/1038>`_)
+* [maintenance] disable unittests for moveit_ros_perception ... due to broken Mesa OpenGL (since version 17.x?) (`#982 <https://github.com/ros-planning/moveit/issues/982>`_)
+* [maintenance] add minimum required pluginlib version (`#927 <https://github.com/ros-planning/moveit/issues/927>`_)
+* Contributors: Adrian Zwiener, Martin Günther, Michael Görner, Mikael Arguedas, Mohmmad Ayman, Ridhwan Luthra, Robert Haschke, mike lautman
+
+0.10.1 (2018-05-25)
+-------------------
+* boost::shared_ptr -> std::shared_ptr
+* migration from tf to tf2 API (`#830 <https://github.com/ros-planning/moveit/issues/830>`_)
+* [fix] make OpenGL parts optional (`#698 <https://github.com/ros-planning/moveit/issues/698>`_)
+* Contributors: Bence Magyar, Ian McMahon, Lukas Bulwahn, Michael Görner, Mikael Arguedas, Robert Haschke
+
+0.9.11 (2017-12-25)
+-------------------
+
+0.9.10 (2017-12-09)
+-------------------
+* [improve] removed deprecated pluginlib macro (`#677 <https://github.com/ros-planning/moveit/issues/677>`_)
+* Contributors: Mikael Arguedas
+
 0.9.9 (2017-08-06)
 ------------------
 
@@ -68,7 +119,7 @@ Changelog for package moveit_ros_perception
 
 0.6.3 (2014-12-03)
 ------------------
-* port `#445 <https://github.com/ros-planning/moveit_ros/issues/445>`_ to indigo
+* port `moveit_ros#445 <https://github.com/ros-planning/moveit_ros/issues/445>`_ to indigo
 * disable test that needs display when no display defined
 * GL_TYPE() is a function in newer versions of OpenGL, this fixes tests on Ubuntu 14.04
 * Contributors: Michael Ferguson

@@ -2,6 +2,47 @@
 Changelog for package moveit_ros_manipulation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.10.8 (2018-12-24)
+-------------------
+
+0.10.7 (2018-12-13)
+-------------------
+
+0.10.6 (2018-12-09)
+-------------------
+* [maintenance] Replaced Eigen::Affine3d -> Eigen::Isometry3d (`#1096 <https://github.com/ros-planning/moveit/issues/1096>`_)
+* [maintenance] Code Cleanup (`#1196 <https://github.com/ros-planning/moveit/issues/1196>`_)
+* Contributors: Robert Haschke
+
+0.10.5 (2018-11-01)
+-------------------
+
+0.10.4 (2018-10-29)
+-------------------
+
+0.10.3 (2018-10-29)
+-------------------
+
+0.10.2 (2018-10-24)
+-------------------
+* [fix] Eigen alignment issuses due to missing aligned allocation (`#1039 <https://github.com/ros-planning/moveit/issues/1039>`_)
+* [enhancement] Add info messages to pick and place routine (`#1004 <https://github.com/ros-planning/moveit/issues/1004>`_)
+* [maintenance] add minimum required pluginlib version (`#927 <https://github.com/ros-planning/moveit/issues/927>`_)
+* Contributors: Adrian Zwiener, Felix von Drigalski, Mikael Arguedas, Mohmmad Ayman, Robert Haschke, mike lautman
+
+0.10.1 (2018-05-25)
+-------------------
+* [maintenance] migration from tf to tf2 API (`#830 <https://github.com/ros-planning/moveit/issues/830>`_)
+* Contributors: Ian McMahon
+
+0.9.11 (2017-12-25)
+-------------------
+
+0.9.10 (2017-12-09)
+-------------------
+* [capability][kinetic onward][moveit_ros_planning_interface] Adapt pick pipeline to function without object (`#599 <https://github.com/ros-planning/moveit/issues/599>`_)
+* Contributors: 2scholz
+
 0.9.9 (2017-08-06)
 ------------------
 

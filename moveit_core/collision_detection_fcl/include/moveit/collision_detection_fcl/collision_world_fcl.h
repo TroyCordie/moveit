@@ -38,7 +38,14 @@
 #define MOVEIT_COLLISION_DETECTION_FCL_COLLISION_WORLD_FCL_
 
 #include <moveit/collision_detection_fcl/collision_robot_fcl.h>
+#include <moveit/collision_detection_fcl/fcl_compat.h>
+
+#if (MOVEIT_FCL_VERSION >= FCL_VERSION_CHECK(0, 6, 0))
+#include <fcl/broadphase/broadphase_collision_manager.h>
+#else
 #include <fcl/broadphase/broadphase.h>
+#endif
+
 #include <memory>
 
 namespace collision_detection
@@ -49,46 +56,39 @@ public:
   CollisionWorldFCL();
   explicit CollisionWorldFCL(const WorldPtr& world);
   CollisionWorldFCL(const CollisionWorldFCL& other, const WorldPtr& world);
-  virtual ~CollisionWorldFCL();
+  ~CollisionWorldFCL() override;
 
-  virtual void checkRobotCollision(const CollisionRequest& req, CollisionResult& res, const CollisionRobot& robot,
-                                   const robot_state::RobotState& state) const;
-  virtual void checkRobotCollision(const CollisionRequest& req, CollisionResult& res, const CollisionRobot& robot,
-                                   const robot_state::RobotState& state, const AllowedCollisionMatrix& acm) const;
-  virtual void checkRobotCollision(const CollisionRequest& req, CollisionResult& res, const CollisionRobot& robot,
-                                   const robot_state::RobotState& state1, const robot_state::RobotState& state2) const;
-  virtual void checkRobotCollision(const CollisionRequest& req, CollisionResult& res, const CollisionRobot& robot,
-                                   const robot_state::RobotState& state1, const robot_state::RobotState& state2,
-                                   const AllowedCollisionMatrix& acm) const;
-  virtual void checkWorldCollision(const CollisionRequest& req, CollisionResult& res,
-                                   const CollisionWorld& other_world) const;
-  virtual void checkWorldCollision(const CollisionRequest& req, CollisionResult& res, const CollisionWorld& other_world,
-                                   const AllowedCollisionMatrix& acm) const;
+  void checkRobotCollision(const CollisionRequest& req, CollisionResult& res, const CollisionRobot& robot,
+                           const robot_state::RobotState& state) const override;
+  void checkRobotCollision(const CollisionRequest& req, CollisionResult& res, const CollisionRobot& robot,
+                           const robot_state::RobotState& state, const AllowedCollisionMatrix& acm) const override;
+  void checkRobotCollision(const CollisionRequest& req, CollisionResult& res, const CollisionRobot& robot,
+                           const robot_state::RobotState& state1, const robot_state::RobotState& state2) const override;
+  void checkRobotCollision(const CollisionRequest& req, CollisionResult& res, const CollisionRobot& robot,
+                           const robot_state::RobotState& state1, const robot_state::RobotState& state2,
+                           const AllowedCollisionMatrix& acm) const override;
+  void checkWorldCollision(const CollisionRequest& req, CollisionResult& res,
+                           const CollisionWorld& other_world) const override;
+  void checkWorldCollision(const CollisionRequest& req, CollisionResult& res, const CollisionWorld& other_world,
+                           const AllowedCollisionMatrix& acm) const override;
 
-  virtual double distanceRobot(const CollisionRobot& robot, const robot_state::RobotState& state,
-                               bool verbose = false) const;
-  virtual double distanceRobot(const CollisionRobot& robot, const robot_state::RobotState& state,
-                               const AllowedCollisionMatrix& acm, bool verbose = false) const;
-  virtual double distanceWorld(const CollisionWorld& world, bool verbose = false) const;
-  virtual double distanceWorld(const CollisionWorld& world, const AllowedCollisionMatrix& acm,
-                               bool verbose = false) const;
+  void distanceRobot(const DistanceRequest& req, DistanceResult& res, const CollisionRobot& robot,
+                     const robot_state::RobotState& state) const override;
 
-  virtual void setWorld(const WorldPtr& world);
+  void distanceWorld(const DistanceRequest& req, DistanceResult& res, const CollisionWorld& world) const override;
+
+  void setWorld(const WorldPtr& world) override;
 
 protected:
   void checkWorldCollisionHelper(const CollisionRequest& req, CollisionResult& res, const CollisionWorld& other_world,
                                  const AllowedCollisionMatrix* acm) const;
   void checkRobotCollisionHelper(const CollisionRequest& req, CollisionResult& res, const CollisionRobot& robot,
                                  const robot_state::RobotState& state, const AllowedCollisionMatrix* acm) const;
-  double distanceRobotHelper(const CollisionRobot& robot, const robot_state::RobotState& state,
-                             const AllowedCollisionMatrix* acm, bool verbose = false) const;
-  double distanceWorldHelper(const CollisionWorld& world, const AllowedCollisionMatrix* acm,
-                             bool verbose = false) const;
 
   void constructFCLObject(const World::Object* obj, FCLObject& fcl_obj) const;
   void updateFCLObject(const std::string& id);
 
-  std::unique_ptr<fcl::BroadPhaseCollisionManager> manager_;
+  std::unique_ptr<fcl::BroadPhaseCollisionManagerd> manager_;
   std::map<std::string, FCLObject> fcl_objs_;
 
 private:

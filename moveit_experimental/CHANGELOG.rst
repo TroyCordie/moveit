@@ -2,6 +2,51 @@
 Changelog for package moveit_experimental
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.10.8 (2018-12-24)
+-------------------
+
+0.10.7 (2018-12-13)
+-------------------
+
+0.10.6 (2018-12-09)
+-------------------
+* [enhancement] Rearranged CHOMP-related modules within moveit_planners/chomp (`#1251 <https://github.com/ros-planning/moveit/issues/1251>`_)
+* [maintenance] Replaced Eigen::Affine3d -> Eigen::Isometry3d (`#1096 <https://github.com/ros-planning/moveit/issues/1096>`_)
+* Contributors: Dave Coleman, Michael Görner, Robert Haschke
+
+0.10.5 (2018-11-01)
+-------------------
+
+0.10.4 (2018-10-29)
+-------------------
+
+0.10.3 (2018-10-29)
+-------------------
+* [fix] Build regression (`#1134 <https://github.com/ros-planning/moveit/issues/1134>`_)
+* [fix] compiler warnings (`#1089 <https://github.com/ros-planning/moveit/issues/1089>`_)
+* Contributors: Robert Haschke
+
+0.10.2 (2018-10-24)
+-------------------
+* [maintenance] various compiler warnings (`#1038 <https://github.com/ros-planning/moveit/issues/1038>`_)
+* [maintenance] add minimum required pluginlib version (`#927 <https://github.com/ros-planning/moveit/issues/927>`_)
+* Contributors: Mikael Arguedas, Robert Haschke, mike lautman
+
+0.10.1 (2018-05-25)
+-------------------
+* boost::shared_ptr -> std::shared_ptr
+* migration from tf to tf2 API (`#830 <https://github.com/ros-planning/moveit/issues/830>`_)
+* switch to ROS_LOGGER from CONSOLE_BRIDGE (`#874 <https://github.com/ros-planning/moveit/issues/874>`_)
+* Contributors: Bence Magyar, Ian McMahon, Levi Armstrong, Mikael Arguedas, Robert Haschke, Xiaojian Ma
+
+0.9.11 (2017-12-25)
+-------------------
+
+0.9.10 (2017-12-09)
+-------------------
+* [fix] remove explicit fcl depends `#632 <https://github.com/ros-planning/moveit/pull/632>`_
+* Contributors: v4hn
+
 0.9.9 (2017-08-06)
 ------------------
 
@@ -68,15 +113,7 @@ Changelog for package moveit_experimental
   * Remove unnecessary debugging ROS_INFO.
   * Port collision_distance_field test to indigo.
   * Remove one assertion that makes collision_distance_field test to fail.
-* Use urdf::*SharedPtr instead of boost::shared_ptr
-  urdfdom_headers uses C++ std::shared_ptr. As it exports it as custom
-  *SharedPtr type, we can use them to stay compatible.
-  Note that there is no std:shared_ptr<const urdf::ModelInterface>
-  typedef, so I replaced it with urdf::ModelInterfaceSharedPtr (loosing a
-  const).
-  Also, there is no conversion from boost::shared_ptr<urdf::Model> to
-  std:shared_ptr<urdf::ModelInterface>, so I used a preprocessor
-  directive.
+* Use ``urdf::*SharedPtr`` instead of ``boost::shared_ptr``
 * fetch moveit_resources path at compile time
   using variable MOVEIT_TEST_RESOURCES_DIR provided by config.h
   instead of calling ros::package::getPath()

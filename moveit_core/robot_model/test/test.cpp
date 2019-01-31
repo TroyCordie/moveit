@@ -41,65 +41,82 @@
 #include <boost/filesystem/path.hpp>
 #include <moveit/profiler/profiler.h>
 #include <moveit_resources/config.h>
+#include <moveit/utils/robot_model_test_utils.h>
 
 class LoadPlanningModelsPr2 : public testing::Test
 {
 protected:
-  virtual void SetUp()
+  void SetUp() override
   {
-    boost::filesystem::path res_path(MOVEIT_TEST_RESOURCES_DIR);
-
-    srdf_model.reset(new srdf::Model());
-    std::string xml_string;
-    std::fstream xml_file((res_path / "pr2_description/urdf/robot.xml").string().c_str(), std::fstream::in);
-    if (xml_file.is_open())
-    {
-      while (xml_file.good())
-      {
-        std::string line;
-        std::getline(xml_file, line);
-        xml_string += (line + "\n");
-      }
-      xml_file.close();
-      urdf_model = urdf::parseURDF(xml_string);
-    }
-    srdf_model->initFile(*urdf_model, (res_path / "pr2_description/srdf/robot.xml").string());
-    robot_model.reset(new moveit::core::RobotModel(urdf_model, srdf_model));
+    robot_model_ = moveit::core::loadTestingRobotModel("pr2_description");
   };
 
-  virtual void TearDown()
+  void TearDown() override
   {
   }
 
 protected:
-  urdf::ModelInterfaceSharedPtr urdf_model;
-  srdf::ModelSharedPtr srdf_model;
-  moveit::core::RobotModelConstPtr robot_model;
+  moveit::core::RobotModelConstPtr robot_model_;
 };
 
 TEST_F(LoadPlanningModelsPr2, InitOK)
 {
-  ASSERT_EQ(urdf_model->getName(), "pr2");
-  ASSERT_EQ(srdf_model->getName(), "pr2");
+  ASSERT_EQ(robot_model_->getURDF()->getName(), "pr2");
+  ASSERT_EQ(robot_model_->getSRDF()->getName(), "pr2");
 }
 
 TEST_F(LoadPlanningModelsPr2, Model)
 {
-  // robot_model->printModelInfo(std::cout);
+  // robot_model_->printModelInfo(std::cout);
 
-  const std::vector<const moveit::core::JointModel*>& joints = robot_model->getJointModels();
+  const std::vector<const moveit::core::JointModel*>& joints = robot_model_->getJointModels();
   for (std::size_t i = 0; i < joints.size(); ++i)
   {
-    ASSERT_EQ(joints[i]->getJointIndex(), i);
-    ASSERT_EQ(robot_model->getJointModel(joints[i]->getName()), joints[i]);
+    ASSERT_EQ(joints[i]->getJointIndex(), static_cast<int>(i));
+    ASSERT_EQ(robot_model_->getJointModel(joints[i]->getName()), joints[i]);
   }
-  const std::vector<const moveit::core::LinkModel*>& links = robot_model->getLinkModels();
+  const std::vector<const moveit::core::LinkModel*>& links = robot_model_->getLinkModels();
   for (std::size_t i = 0; i < links.size(); ++i)
   {
-    ASSERT_EQ(links[i]->getLinkIndex(), i);
-    //    std::cout << joints[i]->getName() << std::endl;
+    ASSERT_EQ(links[i]->getLinkIndex(), static_cast<int>(i));
   }
   moveit::tools::Profiler::Status();
+}
+
+TEST(SiblingAssociateLinks, SimpleYRobot)
+{
+  /* base_link - a - b - c
+                  \
+                   - d ~ e          */
+  moveit::core::RobotModelBuilder builder("one_robot", "base_link");
+  builder.addChain("base_link->a", "continuous");
+  builder.addChain("a->b->c", "fixed");
+  builder.addChain("a->d", "fixed");
+  builder.addChain("d->e", "continuous");
+  builder.addVirtualJoint("odom", "base_link", "planar", "base_joint");
+  builder.addGroup({}, { "base_joint" }, "base_joint");
+  ASSERT_TRUE(builder.isValid());
+  moveit::core::RobotModelConstPtr robot_model = builder.build();
+
+  const std::string a = "a", b = "b", c = "c", d = "d";
+  auto connected = { a, b, c, d };  // these are rigidly connected with each other
+  moveit::core::LinkTransformMap map;
+
+  for (const std::string& root : connected)
+  {
+    SCOPED_TRACE("root: " + root);
+    std::set<std::string> expected_set(connected);
+    expected_set.erase(root);
+    std::set<std::string> actual_set;
+    for (const auto& item : robot_model->getLinkModel(root)->getAssociatedFixedTransforms())
+      actual_set.insert(item.first->getName());
+
+    std::ostringstream expected, actual;
+    std::copy(expected_set.begin(), expected_set.end(), std::ostream_iterator<std::string>(expected, " "));
+    std::copy(actual_set.begin(), actual_set.end(), std::ostream_iterator<std::string>(actual, " "));
+
+    EXPECT_EQ(expected.str(), actual.str());
+  }
 }
 
 int main(int argc, char** argv)

@@ -40,6 +40,7 @@
 
 #include <moveit/robot_model/robot_model.h>
 #include <moveit/robot_state/attached_body.h>
+#include <moveit/macros/deprecation.h>
 #include <sensor_msgs/JointState.h>
 #include <visualization_msgs/MarkerArray.h>
 #include <std_msgs/ColorRGBA.h>
@@ -61,6 +62,46 @@ MOVEIT_CLASS_FORWARD(RobotState);
 typedef boost::function<bool(RobotState* robot_state, const JointModelGroup* joint_group,
                              const double* joint_group_variable_values)>
     GroupStateValidityCallbackFn;
+
+/** \brief Struct for containing jump_threshold.
+
+    For the purposes of maintaining API, we support both \e jump_threshold_factor which provides a scaling factor for
+    detecting joint space jumps and \e revolute_jump_threshold and \e prismatic_jump_threshold which provide abolute
+    thresholds for detecting joint space jumps. */
+struct JumpThreshold
+{
+  double factor;
+  double revolute;   // Radians
+  double prismatic;  // Meters
+
+  explicit JumpThreshold() : factor(0.0), revolute(0.0), prismatic(0.0)
+  {
+  }
+
+  explicit JumpThreshold(double jt_factor) : JumpThreshold()
+  {
+    factor = jt_factor;
+  }
+
+  explicit JumpThreshold(double jt_revolute, double jt_prismatic) : JumpThreshold()
+  {
+    revolute = jt_revolute;    // Radians
+    prismatic = jt_prismatic;  // Meters
+  }
+};
+
+/** \brief Struct for containing max_step for computeCartesianPath
+
+    Setting translation to zero will disable checking for translations and the same goes for rotation */
+struct MaxEEFStep
+{
+  MaxEEFStep(double translation = 0.0, double rotation = 0.0) : translation(translation), rotation(rotation)
+  {
+  }
+
+  double translation;  // Meters
+  double rotation;     // Radians
+};
 
 /** \brief Representation of a robot's state. This includes position,
     velocity, acceleration and effort.
@@ -502,12 +543,12 @@ public:
     updateMimicJoint(joint);
   }
 
-  void setJointPositions(const std::string& joint_name, const Eigen::Affine3d& transform)
+  void setJointPositions(const std::string& joint_name, const Eigen::Isometry3d& transform)
   {
     setJointPositions(robot_model_->getJointModel(joint_name), transform);
   }
 
-  void setJointPositions(const JointModel* joint, const Eigen::Affine3d& transform)
+  void setJointPositions(const JointModel* joint, const Eigen::Isometry3d& transform)
   {
     joint->computeVariablePositions(transform, position_ + joint->getFirstVariableIndex());
     markDirtyJointTransforms(joint);
@@ -520,17 +561,7 @@ public:
     memcpy(velocity_ + joint->getFirstVariableIndex(), velocity, joint->getVariableCount() * sizeof(double));
   }
 
-  void setJointEfforts(const JointModel* joint, const double* effort)
-  {
-    if (has_acceleration_)
-    {
-      logError("Unable to set joint efforts because array is being used for accelerations");
-      return;
-    }
-    has_effort_ = true;
-
-    memcpy(effort_ + joint->getFirstVariableIndex(), effort, joint->getVariableCount() * sizeof(double));
-  }
+  void setJointEfforts(const JointModel* joint, const double* effort);
 
   const double* getJointPositions(const std::string& joint_name) const
   {
@@ -902,7 +933,7 @@ as the new values that correspond to the group */
    * @param solver - a kin solver whose base frame is important to us
    * @return true if no error
    */
-  bool setToIKSolverFrame(Eigen::Affine3d& pose, const kinematics::KinematicsBaseConstPtr& solver);
+  bool setToIKSolverFrame(Eigen::Isometry3d& pose, const kinematics::KinematicsBaseConstPtr& solver);
 
   /**
    * \brief Convert the frame of reference of the pose to that same frame as the IK solver expects
@@ -910,7 +941,7 @@ as the new values that correspond to the group */
    * @param ik_frame - the name of frame of reference of base of ik solver
    * @return true if no error
    */
-  bool setToIKSolverFrame(Eigen::Affine3d& pose, const std::string& ik_frame);
+  bool setToIKSolverFrame(Eigen::Isometry3d& pose, const std::string& ik_frame);
 
   /** \brief If the group this state corresponds to is a chain and a solver is available, then the joint values can be
      set by computing inverse kinematics.
@@ -943,7 +974,7 @@ as the new values that correspond to the group */
       @param tip The name of the link the pose is specified for
       @param attempts The number of times IK is attempted
       @param timeout The timeout passed to the kinematics solver on each attempt */
-  bool setFromIK(const JointModelGroup* group, const Eigen::Affine3d& pose, unsigned int attempts = 0,
+  bool setFromIK(const JointModelGroup* group, const Eigen::Isometry3d& pose, unsigned int attempts = 0,
                  double timeout = 0.0, const GroupStateValidityCallbackFn& constraint = GroupStateValidityCallbackFn(),
                  const kinematics::KinematicsQueryOptions& options = kinematics::KinematicsQueryOptions());
 
@@ -954,7 +985,7 @@ as the new values that correspond to the group */
       @param attempts The number of times IK is attempted
       @param timeout The timeout passed to the kinematics solver on each attempt
       @param constraint A state validity constraint to be required for IK solutions */
-  bool setFromIK(const JointModelGroup* group, const Eigen::Affine3d& pose, const std::string& tip,
+  bool setFromIK(const JointModelGroup* group, const Eigen::Isometry3d& pose, const std::string& tip,
                  unsigned int attempts = 0, double timeout = 0.0,
                  const GroupStateValidityCallbackFn& constraint = GroupStateValidityCallbackFn(),
                  const kinematics::KinematicsQueryOptions& options = kinematics::KinematicsQueryOptions());
@@ -968,7 +999,7 @@ as the new values that correspond to the group */
       @param attempts The number of times IK is attempted
       @param timeout The timeout passed to the kinematics solver on each attempt
       @param constraint A state validity constraint to be required for IK solutions */
-  bool setFromIK(const JointModelGroup* group, const Eigen::Affine3d& pose, const std::string& tip,
+  bool setFromIK(const JointModelGroup* group, const Eigen::Isometry3d& pose, const std::string& tip,
                  const std::vector<double>& consistency_limits, unsigned int attempts = 0, double timeout = 0.0,
                  const GroupStateValidityCallbackFn& constraint = GroupStateValidityCallbackFn(),
                  const kinematics::KinematicsQueryOptions& options = kinematics::KinematicsQueryOptions());
@@ -983,7 +1014,7 @@ as the new values that correspond to the group */
       @param attempts The number of times IK is attempted
       @param timeout The timeout passed to the kinematics solver on each attempt
       @param constraint A state validity constraint to be required for IK solutions */
-  bool setFromIK(const JointModelGroup* group, const EigenSTL::vector_Affine3d& poses,
+  bool setFromIK(const JointModelGroup* group, const EigenSTL::vector_Isometry3d& poses,
                  const std::vector<std::string>& tips, unsigned int attempts = 0, double timeout = 0.0,
                  const GroupStateValidityCallbackFn& constraint = GroupStateValidityCallbackFn(),
                  const kinematics::KinematicsQueryOptions& options = kinematics::KinematicsQueryOptions());
@@ -999,7 +1030,7 @@ as the new values that correspond to the group */
       @param attempts The number of times IK is attempted
       @param timeout The timeout passed to the kinematics solver on each attempt
       @param constraint A state validity constraint to be required for IK solutions */
-  bool setFromIK(const JointModelGroup* group, const EigenSTL::vector_Affine3d& poses,
+  bool setFromIK(const JointModelGroup* group, const EigenSTL::vector_Isometry3d& poses,
                  const std::vector<std::string>& tips, const std::vector<std::vector<double> >& consistency_limits,
                  unsigned int attempts = 0, double timeout = 0.0,
                  const GroupStateValidityCallbackFn& constraint = GroupStateValidityCallbackFn(),
@@ -1014,16 +1045,16 @@ as the new values that correspond to the group */
       @param attempts The number of times IK is attempted
       @param timeout The timeout passed to the kinematics solver on each attempt
       @param constraint A state validity constraint to be required for IK solutions */
-  bool setFromIKSubgroups(const JointModelGroup* group, const EigenSTL::vector_Affine3d& poses,
+  bool setFromIKSubgroups(const JointModelGroup* group, const EigenSTL::vector_Isometry3d& poses,
                           const std::vector<std::string>& tips,
                           const std::vector<std::vector<double> >& consistency_limits, unsigned int attempts = 0,
                           double timeout = 0.0,
                           const GroupStateValidityCallbackFn& constraint = GroupStateValidityCallbackFn(),
                           const kinematics::KinematicsQueryOptions& options = kinematics::KinematicsQueryOptions());
 
-  /** \brief Set the joint values from a cartesian velocity applied during a time dt
+  /** \brief Set the joint values from a Cartesian velocity applied during a time dt
    * @param group the group of joints this function operates on
-   * @param twist a cartesian velocity on the 'tip' frame
+   * @param twist a Cartesian velocity on the 'tip' frame
    * @param tip the frame for which the twist is given
    * @param dt a time interval (seconds)
    * @param st a secondary task computation function
@@ -1031,9 +1062,9 @@ as the new values that correspond to the group */
   bool setFromDiffIK(const JointModelGroup* group, const Eigen::VectorXd& twist, const std::string& tip, double dt,
                      const GroupStateValidityCallbackFn& constraint = GroupStateValidityCallbackFn());
 
-  /** \brief Set the joint values from a cartesian velocity applied during a time dt
+  /** \brief Set the joint values from a Cartesian velocity applied during a time dt
    * @param group the group of joints this function operates on
-   * @param twist a cartesian velocity on the 'tip' frame
+   * @param twist a Cartesian velocity on the 'tip' frame
    * @param tip the frame for which the twist is given
    * @param dt a time interval (seconds)
    * @param st a secondary task computation function
@@ -1043,121 +1074,140 @@ as the new values that correspond to the group */
 
   /** \brief Compute the sequence of joint values that correspond to a straight Cartesian path for a particular group.
 
-      The Cartesian path to be followed is specified as a direction of motion (\e direction, unit vector) for the origin
-     of a robot
-      link (\e link). The direction is assumed to be either in a global reference frame or in the local reference frame
-     of the
-      link. In the latter case (\e global_reference_frame is false) the \e direction is rotated accordingly. The link
-     needs to move in a
-      straight line, following the specified direction, for the desired \e distance. The resulting joint values are
-     stored in
-      the vector \e traj, one by one. The maximum distance in Cartesian space between consecutive points on the
-     resulting path
-      is specified by \e max_step.  If a \e validCallback is specified, this is passed to the internal call to
-      setFromIK(). In case of IK failure, the computation of the path stops and the value returned corresponds to the
-     distance that
-      was computed and for which corresponding states were added to the path.  At the end of the function call, the
-     state of the
-      group corresponds to the last attempted Cartesian pose.  During the computation of the trajectory, it is sometimes
-     preferred if
-      consecutive joint values do not 'jump' by a large amount in joint space, even if the Cartesian distance between
-     the
-      corresponding points is as expected. To account for this, the \e jump_threshold parameter is provided.  As the
-     joint values
-      corresponding to the Cartesian path are computed, distances in joint space between consecutive points are also
-     computed. Once
-      the sequence of joint values is computed, the average distance between consecutive points (in joint space) is also
-     computed. It
-      is then verified that none of the computed distances is above the average distance by a factor larger than \e
-     jump_threshold. If
-      a point in joint is found such that it is further away than the previous one by more than
-     average_consecutive_distance * \e jump_threshold,
-      that is considered a failure and the returned path is truncated up to just before the jump. The jump detection can
-     be disabled
-      by setting \e jump_threshold to 0.0*/
+     The Cartesian path to be followed is specified as a direction of motion (\e direction, unit vector) for the origin
+     The Cartesian path to be followed is specified as a direction of motion (\e direction, unit vector) for the origin
+     of a robot link (\e link). The direction is assumed to be either in a global reference frame or in the local
+     reference frame of the link. In the latter case (\e global_reference_frame is false) the \e direction is rotated
+     accordingly. The link needs to move in a straight line, following the specified direction, for the desired \e
+     distance. The resulting joint values are stored in the vector \e traj, one by one. The maximum distance in
+     Cartesian space between consecutive points on the resulting path is specified in the \e MaxEEFStep struct which
+     provides two fields: translation and rotation. If a \e validCallback is specified, this is passed to the internal
+     call to setFromIK(). In case of IK failure, the computation of the path stops and the value returned corresponds to
+     the distance that was computed and for which corresponding states were added to the path.  At the end of the
+     function call, the state of the group corresponds to the last attempted Cartesian pose.
+
+     During the computation of the trajectory, it is usually preferred if consecutive joint values do not 'jump' by a
+     large amount in joint space, even if the Cartesian distance between the corresponding points is small as expected.
+     To account for this, the \e jump_threshold struct is provided, which comprises three fields:
+     \e jump_threshold_factor, \e revolute_jump_threshold and \e prismatic_jump_threshold.
+     If either \e revolute_jump_threshold or \e prismatic_jump_threshold  are non-zero, we test for absolute jumps.
+     If \e jump_threshold_factor is non-zero, we test for relative jumps. Otherwise (all params are zero), jump
+     detection is disabled.
+
+     For relative jump detection, the average joint-space distance between consecutive points in the trajectory is
+     computed. If any individual joint-space motion delta is larger then this average distance by a factor of
+     \e jump_threshold_factor, this step is considered a failure and the returned path is truncated up to just
+     before the jump.
+
+     For absolute jump thresholds, if any individual joint-space motion delta is larger then \e revolute_jump_threshold
+     for revolute joints or \e prismatic_jump_threshold for prismatic joints then this step is considered a failure and
+     the returned path is truncated up to just before the jump.*/
   double computeCartesianPath(const JointModelGroup* group, std::vector<RobotStatePtr>& traj, const LinkModel* link,
                               const Eigen::Vector3d& direction, bool global_reference_frame, double distance,
-                              double max_step, double jump_threshold,
+                              const MaxEEFStep& max_step, const JumpThreshold& jump_threshold,
                               const GroupStateValidityCallbackFn& validCallback = GroupStateValidityCallbackFn(),
                               const kinematics::KinematicsQueryOptions& options = kinematics::KinematicsQueryOptions());
+
+  double computeCartesianPath(const JointModelGroup* group, std::vector<RobotStatePtr>& traj, const LinkModel* link,
+                              const Eigen::Vector3d& direction, bool global_reference_frame, double distance,
+                              double max_step, double jump_threshold_factor,
+                              const GroupStateValidityCallbackFn& validCallback = GroupStateValidityCallbackFn(),
+                              const kinematics::KinematicsQueryOptions& options = kinematics::KinematicsQueryOptions())
+  {
+    return computeCartesianPath(group, traj, link, direction, global_reference_frame, distance,
+                                MaxEEFStep(max_step, max_step), JumpThreshold(jump_threshold_factor), validCallback,
+                                options);
+  }
 
   /** \brief Compute the sequence of joint values that correspond to a straight Cartesian path, for a particular group.
 
-      The Cartesian path to be followed is specified as a target frame to be reached (\e target) for the origin of a
-     robot
-      link (\e link). The target frame is assumed to be either in a global reference frame or in the local reference
-     frame of the
-      link. In the latter case (\e global_reference_frame is false) the \e target is rotated accordingly. The link needs
-     to move in a
-      straight line towards the target. The resulting joint values are stored in
-      the vector \e traj, one by one. The maximum distance in Cartesian space between consecutive points on the
-     resulting path
-      is specified by \e max_step.  If a \e validCallback is specified, this is passed to the internal call to
-      setFromIK(). In case of IK failure, the computation of the path stops and the value returned corresponds to the
-     percentage of the
-      path (between 0 and 1) that was completed and for which corresponding states were added to the path.  At the end
-     of the function call,
-      the state of the group corresponds to the last attempted Cartesian pose.  During the computation of the
-     trajectory, it is sometimes preferred if
-      consecutive joint values do not 'jump' by a large amount in joint space, even if the Cartesian distance between
-     the
-      corresponding points is as expected. To account for this, the \e jump_threshold parameter is provided.  As the
-     joint values
-      corresponding to the Cartesian path are computed, distances in joint space between consecutive points are also
-     computed. Once
-      the sequence of joint values is computed, the average distance between consecutive points (in joint space) is also
-     computed. It
-      is then verified that none of the computed distances is above the average distance by a factor larger than \e
-     jump_threshold. If
-      a point in joint is found such that it is further away than the previous one by more than
-     average_consecutive_distance * \e jump_threshold,
-      that is considered a failure and the returned path is truncated up to just before the jump. The jump detection can
-     be disabled
-      by setting \e jump_threshold to 0.0*/
+     In contrast to the previous function, the Cartesian path is specified as a target frame to be reached (\e target)
+     for the origin of a robot link (\e link). The target frame is assumed to be either in a global reference frame or
+     in the local reference frame of the link. In the latter case (\e global_reference_frame is false) the \e target is
+     rotated accordingly. All other comments from the previous function apply. */
   double computeCartesianPath(const JointModelGroup* group, std::vector<RobotStatePtr>& traj, const LinkModel* link,
-                              const Eigen::Affine3d& target, bool global_reference_frame, double max_step,
-                              double jump_threshold,
+                              const Eigen::Isometry3d& target, bool global_reference_frame, const MaxEEFStep& max_step,
+                              const JumpThreshold& jump_threshold,
                               const GroupStateValidityCallbackFn& validCallback = GroupStateValidityCallbackFn(),
                               const kinematics::KinematicsQueryOptions& options = kinematics::KinematicsQueryOptions());
+
+  double computeCartesianPath(const JointModelGroup* group, std::vector<RobotStatePtr>& traj, const LinkModel* link,
+                              const Eigen::Isometry3d& target, bool global_reference_frame, double max_step,
+                              double jump_threshold_factor,
+                              const GroupStateValidityCallbackFn& validCallback = GroupStateValidityCallbackFn(),
+                              const kinematics::KinematicsQueryOptions& options = kinematics::KinematicsQueryOptions())
+  {
+    return computeCartesianPath(group, traj, link, target, global_reference_frame, MaxEEFStep(max_step),
+                                JumpThreshold(jump_threshold_factor), validCallback, options);
+  }
 
   /** \brief Compute the sequence of joint values that perform a general Cartesian path.
 
-      The Cartesian path to be followed is specified as a set of \e waypoints to be sequentially reached for the origin
-     of a robot
-      link (\e link). The waypoints are transforms given either in a global reference frame or in the local reference
-     frame of the
-      link at the immediately preceeding waypoint. The link needs to move in a straight line between two consecutive
-     waypoints.
-      The resulting joint values are stored in the vector \e traj, one by one. The maximum distance in Cartesian space
-     between
-      consecutive points on the resulting path is specified by \e max_step.  If a \e validCallback is specified, this is
-     passed to the
-      internal call to setFromIK(). In case of IK failure, the computation of the path stops and the value returned
-     corresponds to the
-      percentage of the path (between 0 and 1) that was completed and for which corresponding states were added to the
-     path.  At the end
-      of the function call, the state of the group corresponds to the last attempted Cartesian pose.  During the
-     computation of the
-      trajectory, it is sometimes preferred if consecutive joint values do not 'jump' by a large amount in joint space,
-     even if the
-      Cartesian distance between the corresponding points is as expected. To account for this, the \e jump_threshold
-     parameter is
-      provided.  As the joint values corresponding to the Cartesian path are computed, distances in joint space between
-     consecutive
-      points are also computed. Once the sequence of joint values is computed, the average distance between consecutive
-     points (in
-      joint space) is also computed. It is then verified that none of the computed distances is above the average
-     distance by a
-      factor larger than \e jump_threshold. If a point in joint is found such that it is further away than the previous
-     one by more
-      than average_consecutive_distance * \e jump_threshold, that is considered a failure and the returned path is
-     truncated up to
-      just before the jump. The jump detection can be disabled by setting \e jump_threshold to 0.0*/
+     In contrast to the previous functions, the Cartesian path is specified as a set of \e waypoints to be sequentially
+     reached for the origin of a robot link (\e link). The waypoints are transforms given either in a global reference
+     frame or in the local reference frame of the link at the immediately preceeding waypoint. The link needs to move
+     in a straight line between two consecutive waypoints. All other comments apply. */
   double computeCartesianPath(const JointModelGroup* group, std::vector<RobotStatePtr>& traj, const LinkModel* link,
-                              const EigenSTL::vector_Affine3d& waypoints, bool global_reference_frame, double max_step,
-                              double jump_threshold,
+                              const EigenSTL::vector_Isometry3d& waypoints, bool global_reference_frame,
+                              const MaxEEFStep& max_step, const JumpThreshold& jump_threshold,
                               const GroupStateValidityCallbackFn& validCallback = GroupStateValidityCallbackFn(),
                               const kinematics::KinematicsQueryOptions& options = kinematics::KinematicsQueryOptions());
+
+  double computeCartesianPath(const JointModelGroup* group, std::vector<RobotStatePtr>& traj, const LinkModel* link,
+                              const EigenSTL::vector_Isometry3d& waypoints, bool global_reference_frame,
+                              double max_step, double jump_threshold_factor,
+                              const GroupStateValidityCallbackFn& validCallback = GroupStateValidityCallbackFn(),
+                              const kinematics::KinematicsQueryOptions& options = kinematics::KinematicsQueryOptions())
+  {
+    return computeCartesianPath(group, traj, link, waypoints, global_reference_frame, MaxEEFStep(max_step),
+                                JumpThreshold(jump_threshold_factor), validCallback, options);
+  }
+
+  /** \brief Tests joint space jumps of a trajectory.
+
+     If \e jump_threshold_factor is non-zero, we test for relative jumps.
+     If \e revolute_jump_threshold  or \e prismatic_jump_threshold are non-zero, we test for absolute jumps.
+     Both tests can be combined. If all params are zero, jump detection is disabled.
+     For relative jump detection, the average joint-space distance between consecutive points in the trajectory is
+     computed. If any individual joint-space motion delta is larger then this average distance by a factor of
+     \e jump_threshold_factor, this step is considered a failure and the returned path is truncated up to just
+     before the jump.
+
+     @param group The joint model group of the robot state.
+     @param traj The trajectory that should be tested.
+     @param jump_threshold The struct holding jump thresholds to determine if a joint space jump has occurred.
+     @return The fraction of the trajectory that passed.
+  */
+  static double testJointSpaceJump(const JointModelGroup* group, std::vector<RobotStatePtr>& traj,
+                                   const JumpThreshold& jump_threshold);
+
+  /** \brief Tests for relative joint space jumps of the trajectory \e traj.
+
+     First, the average distance between adjacent trajectory points is computed. If two adjacent trajectory points
+     have distance > \e jump_threshold_factor * average, the trajectory is truncated at this point.
+
+     @param group The joint model group of the robot state.
+     @param traj The trajectory that should be tested.
+     @param jump_threshold_factor The threshold to determine if a joint space jump has occurred .
+     @return The fraction of the trajectory that passed.
+  */
+  static double testRelativeJointSpaceJump(const JointModelGroup* group, std::vector<RobotStatePtr>& traj,
+                                           double jump_threshold_factor);
+
+  /** \brief Tests for absolute joint space jumps of the trajectory \e traj.
+
+     The joint-space difference between consecutive waypoints is computed for each active joint and compared to the
+     absolute thresholds \e revolute_jump_threshold for revolute joints and \e prismatic_jump_threshold for prismatic
+     joints. If these thresholds are exceeded, the trajectory is truncated.
+
+     @param group The joint model group of the robot state.
+     @param traj The trajectory that should be tested.
+     @param revolute_jump_threshold Absolute joint-space threshold for revolute joints.
+     @param prismatic_jump_threshold Absolute joint-space threshold for prismatic joints.
+     @return The fraction of the trajectory that passed.
+  */
+  static double testAbsoluteJointSpaceJump(const JointModelGroup* group, std::vector<RobotStatePtr>& traj,
+                                           double revolute_jump_threshold, double prismatic_jump_threshold);
 
   /** \brief Compute the Jacobian with reference to a particular point on a given link, for a specified group.
    * \param group The group to compute the Jacobian for
@@ -1296,43 +1346,50 @@ as the new values that correspond to the group */
   /** \brief Update all transforms. */
   void update(bool force = false);
 
-  /** \brief Update the state after setting a particular link to the input global transform pose.*/
-  void updateStateWithLinkAt(const std::string& link_name, const Eigen::Affine3d& transform, bool backward = false)
+  /** \brief Update the state after setting a particular link to the input global transform pose.
+
+      This "warps" the given link to the given pose, neglecting the joint values of its parent joint.
+      The link transforms of link and all its descendants are updated, but not marked as dirty,
+      although they do not match the joint values anymore!
+      Collision body transforms are not yet updated, but marked dirty only.
+      Use update(false) or updateCollisionBodyTransforms() to update them as well.
+   */
+  void updateStateWithLinkAt(const std::string& link_name, const Eigen::Isometry3d& transform, bool backward = false)
   {
     updateStateWithLinkAt(robot_model_->getLinkModel(link_name), transform, backward);
   }
 
   /** \brief Update the state after setting a particular link to the input global transform pose.*/
-  void updateStateWithLinkAt(const LinkModel* link, const Eigen::Affine3d& transform, bool backward = false);
+  void updateStateWithLinkAt(const LinkModel* link, const Eigen::Isometry3d& transform, bool backward = false);
 
-  const Eigen::Affine3d& getGlobalLinkTransform(const std::string& link_name)
+  const Eigen::Isometry3d& getGlobalLinkTransform(const std::string& link_name)
   {
     return getGlobalLinkTransform(robot_model_->getLinkModel(link_name));
   }
 
-  const Eigen::Affine3d& getGlobalLinkTransform(const LinkModel* link)
+  const Eigen::Isometry3d& getGlobalLinkTransform(const LinkModel* link)
   {
     updateLinkTransforms();
     return global_link_transforms_[link->getLinkIndex()];
   }
 
-  const Eigen::Affine3d& getCollisionBodyTransforms(const std::string& link_name, std::size_t index)
+  const Eigen::Isometry3d& getCollisionBodyTransform(const std::string& link_name, std::size_t index)
   {
     return getCollisionBodyTransform(robot_model_->getLinkModel(link_name), index);
   }
 
-  const Eigen::Affine3d& getCollisionBodyTransform(const LinkModel* link, std::size_t index)
+  const Eigen::Isometry3d& getCollisionBodyTransform(const LinkModel* link, std::size_t index)
   {
     updateCollisionBodyTransforms();
     return global_collision_body_transforms_[link->getFirstCollisionBodyTransformIndex() + index];
   }
 
-  const Eigen::Affine3d& getJointTransform(const std::string& joint_name)
+  const Eigen::Isometry3d& getJointTransform(const std::string& joint_name)
   {
     return getJointTransform(robot_model_->getJointModel(joint_name));
   }
 
-  const Eigen::Affine3d& getJointTransform(const JointModel* joint)
+  const Eigen::Isometry3d& getJointTransform(const JointModel* joint)
   {
     const int idx = joint->getJointIndex();
     unsigned char& dirty = dirty_joint_transforms_[idx];
@@ -1344,34 +1401,34 @@ as the new values that correspond to the group */
     return variable_joint_transforms_[idx];
   }
 
-  const Eigen::Affine3d& getGlobalLinkTransform(const std::string& link_name) const
+  const Eigen::Isometry3d& getGlobalLinkTransform(const std::string& link_name) const
   {
     return getGlobalLinkTransform(robot_model_->getLinkModel(link_name));
   }
 
-  const Eigen::Affine3d& getGlobalLinkTransform(const LinkModel* link) const
+  const Eigen::Isometry3d& getGlobalLinkTransform(const LinkModel* link) const
   {
     BOOST_VERIFY(checkLinkTransforms());
     return global_link_transforms_[link->getLinkIndex()];
   }
 
-  const Eigen::Affine3d& getCollisionBodyTransform(const std::string& link_name, std::size_t index) const
+  const Eigen::Isometry3d& getCollisionBodyTransform(const std::string& link_name, std::size_t index) const
   {
     return getCollisionBodyTransform(robot_model_->getLinkModel(link_name), index);
   }
 
-  const Eigen::Affine3d& getCollisionBodyTransform(const LinkModel* link, std::size_t index) const
+  const Eigen::Isometry3d& getCollisionBodyTransform(const LinkModel* link, std::size_t index) const
   {
     BOOST_VERIFY(checkCollisionTransforms());
     return global_collision_body_transforms_[link->getFirstCollisionBodyTransformIndex() + index];
   }
 
-  const Eigen::Affine3d& getJointTransform(const std::string& joint_name) const
+  const Eigen::Isometry3d& getJointTransform(const std::string& joint_name) const
   {
     return getJointTransform(robot_model_->getJointModel(joint_name));
   }
 
-  const Eigen::Affine3d& getJointTransform(const JointModel* joint) const
+  const Eigen::Isometry3d& getJointTransform(const JointModel* joint) const
   {
     BOOST_VERIFY(checkJointTransforms(joint));
     return variable_joint_transforms_[joint->getJointIndex()];
@@ -1537,7 +1594,7 @@ as the new values that correspond to the group */
    * corresponding object from that world to avoid having collisions
    * detected against it. */
   void attachBody(const std::string& id, const std::vector<shapes::ShapeConstPtr>& shapes,
-                  const EigenSTL::vector_Affine3d& attach_trans, const std::set<std::string>& touch_links,
+                  const EigenSTL::vector_Isometry3d& attach_trans, const std::set<std::string>& touch_links,
                   const std::string& link_name,
                   const trajectory_msgs::JointTrajectory& detach_posture = trajectory_msgs::JointTrajectory());
 
@@ -1556,7 +1613,7 @@ as the new values that correspond to the group */
    * corresponding object from that world to avoid having collisions
    * detected against it. */
   void attachBody(const std::string& id, const std::vector<shapes::ShapeConstPtr>& shapes,
-                  const EigenSTL::vector_Affine3d& attach_trans, const std::vector<std::string>& touch_links,
+                  const EigenSTL::vector_Isometry3d& attach_trans, const std::vector<std::string>& touch_links,
                   const std::string& link_name,
                   const trajectory_msgs::JointTrajectory& detach_posture = trajectory_msgs::JointTrajectory())
   {
@@ -1616,10 +1673,10 @@ as the new values that correspond to the group */
   }
 
   /** \brief Get the transformation matrix from the model frame to the frame identified by \e id */
-  const Eigen::Affine3d& getFrameTransform(const std::string& id);
+  const Eigen::Isometry3d& getFrameTransform(const std::string& id);
 
   /** \brief Get the transformation matrix from the model frame to the frame identified by \e id */
-  const Eigen::Affine3d& getFrameTransform(const std::string& id) const;
+  const Eigen::Isometry3d& getFrameTransform(const std::string& id) const;
 
   /** \brief Check if a transformation matrix from the model frame to frame \e id is known */
   bool knowsFrameTransform(const std::string& id) const;
@@ -1674,7 +1731,7 @@ as the new values that correspond to the group */
 
   void printTransforms(std::ostream& out = std::cout) const;
 
-  void printTransform(const Eigen::Affine3d& transform, std::ostream& out = std::cout) const;
+  void printTransform(const Eigen::Isometry3d& transform, std::ostream& out = std::cout) const;
 
   void printDirtyInfo(std::ostream& out = std::cout) const;
 
@@ -1682,7 +1739,7 @@ as the new values that correspond to the group */
 
 private:
   void allocMemory();
-
+  void initTransforms();
   void copyFrom(const RobotState& other);
 
   void markDirtyJointTransforms(const JointModel* joint)
@@ -1713,20 +1770,36 @@ private:
     for (std::size_t i = 0; i < mim.size(); ++i)
     {
       position_[mim[i]->getFirstVariableIndex()] = mim[i]->getMimicFactor() * v + mim[i]->getMimicOffset();
-      dirty_joint_transforms_[mim[i]->getJointIndex()] = 1;
+      markDirtyJointTransforms(mim[i]);
     }
   }
 
   /** \brief Update a set of joints that are certain to be mimicking other joints */
-  void updateMimicJoint(const std::vector<const JointModel*>& mim)
+  /* use updateMimicJoints() instead, which also marks joints dirty */
+  MOVEIT_DEPRECATED void updateMimicJoint(const std::vector<const JointModel*>& mim)
   {
     for (std::size_t i = 0; i < mim.size(); ++i)
     {
       const int fvi = mim[i]->getFirstVariableIndex();
       position_[fvi] =
           mim[i]->getMimicFactor() * position_[mim[i]->getMimic()->getFirstVariableIndex()] + mim[i]->getMimicOffset();
+      // Only mark joint transform dirty, but not the associated link transform
+      // as this function is always used in combination of
+      // updateMimicJoint(group->getMimicJointModels()) + markDirtyJointTransforms(group);
       dirty_joint_transforms_[mim[i]->getJointIndex()] = 1;
     }
+  }
+
+  /** \brief Update all mimic joints within group */
+  void updateMimicJoints(const JointModelGroup* group)
+  {
+    for (const JointModel* jm : group->getMimicJointModels())
+    {
+      const int fvi = jm->getFirstVariableIndex();
+      position_[fvi] = jm->getMimicFactor() * position_[jm->getMimic()->getFirstVariableIndex()] + jm->getMimicOffset();
+      markDirtyJointTransforms(jm);
+    }
+    markDirtyJointTransforms(group);
   }
 
   void updateLinkTransformsInternal(const JointModel* start);
@@ -1734,17 +1807,6 @@ private:
   void getMissingKeys(const std::map<std::string, double>& variable_map,
                       std::vector<std::string>& missing_variables) const;
   void getStateTreeJointString(std::ostream& ss, const JointModel* jm, const std::string& pfx0, bool last) const;
-
-  /**
-   * \brief Tests joint space jumps of a trajectory. First, the average distance between adjacent trajectory points is
-   * computed. If two adjacent trajectory points have distance > \e jump_threshold * average, the trajectory is cut of
-   * at this point.
-   * @param group The joint model group of the robot state.
-   * @param traj The trajectory that should be tested.
-   * @param jump_threshold The threshold to determine if a joint space jump has occurred .
-   * @return The fraction of the trajectory that passed.
-   */
-  double testJointSpaceJump(const JointModelGroup* group, std::vector<RobotStatePtr>& traj, double jump_threshold);
 
   /** \brief This function is only called in debug mode */
   bool checkJointTransforms(const JointModel* joint) const;
@@ -1769,9 +1831,9 @@ private:
   const JointModel* dirty_link_transforms_;
   const JointModel* dirty_collision_body_transforms_;
 
-  Eigen::Affine3d* variable_joint_transforms_;         // this points to an element in transforms_, so it is aligned
-  Eigen::Affine3d* global_link_transforms_;            // this points to an element in transforms_, so it is aligned
-  Eigen::Affine3d* global_collision_body_transforms_;  // this points to an element in transforms_, so it is aligned
+  Eigen::Isometry3d* variable_joint_transforms_;         // this points to an element in transforms_, so it is aligned
+  Eigen::Isometry3d* global_link_transforms_;            // this points to an element in transforms_, so it is aligned
+  Eigen::Isometry3d* global_collision_body_transforms_;  // this points to an element in transforms_, so it is aligned
   unsigned char* dirty_joint_transforms_;
 
   /** \brief All attached bodies that are part of this state, indexed by their name */

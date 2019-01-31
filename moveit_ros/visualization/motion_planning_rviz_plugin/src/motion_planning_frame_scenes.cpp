@@ -49,8 +49,6 @@
 #include <rviz/display_context.h>
 #include <rviz/window_manager_interface.h>
 
-#include <eigen_conversions/eigen_msg.h>
-
 #include <QMessageBox>
 #include <QInputDialog>
 
@@ -196,14 +194,14 @@ void MotionPlanningFrame::deleteQueryButtonClicked()
 
 void MotionPlanningFrame::loadSceneButtonClicked()
 {
-  planning_display_->addBackgroundJob(boost::bind(&MotionPlanningFrame::computeLoadSceneButtonClicked, this), "load "
-                                                                                                              "scene");
+  planning_display_->addBackgroundJob(boost::bind(&MotionPlanningFrame::computeLoadSceneButtonClicked, this),
+                                      "load scene");
 }
 
 void MotionPlanningFrame::loadQueryButtonClicked()
 {
-  planning_display_->addBackgroundJob(boost::bind(&MotionPlanningFrame::computeLoadQueryButtonClicked, this), "load "
-                                                                                                              "query");
+  planning_display_->addBackgroundJob(boost::bind(&MotionPlanningFrame::computeLoadQueryButtonClicked, this),
+                                      "load query");
 }
 
 void MotionPlanningFrame::warehouseItemNameChanged(QTreeWidgetItem* item, int column)
